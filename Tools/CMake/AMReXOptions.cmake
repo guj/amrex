@@ -436,3 +436,9 @@ else ()
        "AMReX_AMRLEVEL" OFF)
 endif ()
 print_option(AMReX_PROBINIT)
+
+
+#
+# Static code analysis  ===============================================
+#
+option(AMReX_CLANG_TIDY "Enable clang-tidy analysis" OFF)
