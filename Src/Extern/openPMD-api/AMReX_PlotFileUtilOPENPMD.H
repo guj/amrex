@@ -14,7 +14,7 @@
 #include <memory>
 
 #ifdef AMREX_USE_OPENPMD_API
-#include <openPMD/openpmd.hpp>
+#include <openPMD/openPMD.hpp>
 #endif
 
 namespace amrex

@@ -12,7 +12,7 @@
 #include <AMReX_EBFabFactory.H>
 #endif
 
-#include <openPMD/openpmd.hpp>
+#include <openPMD/openPMD.hpp>
 
 #include <regex>
 namespace amrex {
