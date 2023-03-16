@@ -1,4 +1,17 @@
 #
+# openPMD_api related targets
+#
+if (AMReX_OPENPMD_API)
+    if (AMReX_MPI)
+       find_package(openPMD 0.14.2 CONFIG REQUIRED COMPONENTS MPI)
+    else ()
+       find_package(openPMD 0.14.2 CONFIG REQUIRED COMPONENTS NOMPI)
+    endif()
+
+    target_link_libraries(amrex PUBLIC openPMD::openPMD)
+endif()
+
+#
 # HDF5 -- here it would be best to create an imported target
 #
 if (AMReX_HDF5)

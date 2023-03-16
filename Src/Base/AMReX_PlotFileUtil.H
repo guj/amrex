@@ -10,6 +10,10 @@
 #include <AMReX_PlotFileUtilHDF5.H>
 #endif
 
+#ifdef AMREX_USE_OPENPMD_API
+#include <AMReX_PlotFileUtilOPENPMD.H>
+#endif
+
 #include <string>
 #include <memory>
 
