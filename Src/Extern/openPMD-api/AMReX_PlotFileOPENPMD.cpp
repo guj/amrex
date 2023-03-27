@@ -297,12 +297,12 @@ namespace amrex {
       :m_Writer(nullptr),       
        m_IsBTD(isBTD)
     {
+      BL_PROFILE("AMReX_openPMDHandler::()");
       CreateWriter(prefix);
     }
 
     AMReX_openPMDHandler::~AMReX_openPMDHandler ()
     {
-      std::cout<<"... ::~handler"<<std::endl;
       if( m_Writer)
       {
           m_Writer.reset( nullptr );
@@ -318,7 +318,7 @@ namespace amrex {
       pp_prefix.query("openpmd_backend", openpmd_backend);
       
       std::string  openpmd_encoding {"f"};      
-      bool encodingDefined = pp_prefix.query("openpmd_encoding", openpmd_encoding);
+      pp_prefix.query("openpmd_encoding", openpmd_encoding);
       openPMD::IterationEncoding encoding = openPMD::IterationEncoding::groupBased;
      
       if ( 0 == openpmd_encoding.compare("v") )
@@ -409,7 +409,6 @@ if( m_openPMDFileType == "default" )
 
     AMReX_openPMDWriter::~AMReX_openPMDWriter ()
     {
-      std::cout<<" .. ::~writer "<<std::endl;
       if( m_Series )
       {
           m_Series->flush();
@@ -425,8 +424,6 @@ if( m_openPMDFileType == "default" )
 
     void AMReX_openPMDWriter::CloseStep(int ts)
     {
-      bool callClose = true;
-
       if (m_Series) {
 	GetIteration(m_CurrentStep).close();
       }      
@@ -565,6 +562,7 @@ if( m_openPMDFileType == "default" )
 					const double time ) const
 
     {
+      BL_PROFILE("AMReX_openPMDWriter::WriteMesh()");
       openPMD::Iteration series_iteration = GetIteration(m_CurrentStep);
       series_iteration.open();
 
@@ -796,6 +794,7 @@ if( m_openPMDFileType == "default" )
 					   const double time ) const
    
     {
+      BL_PROFILE("AMReX_openPMDWriter_BTD::WriteMesh()");
       std::cout<<"TODO ... BTD.. fields .."<<std::endl;
     }
 

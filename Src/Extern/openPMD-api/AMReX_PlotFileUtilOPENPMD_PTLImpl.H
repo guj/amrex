@@ -15,6 +15,7 @@ namespace amrex
     template<class PC>
     void WriteParticles(PC const&  pc)
     {
+      BL_PROFILE("amrex::openpmd_api::WriteParticles()");
       if ((m_OpenPMDHandler == nullptr) || (m_OpenPMDHandler->m_Writer == nullptr))
 	return;
 
@@ -319,9 +320,6 @@ namespace amrex
 					   const amrex::Vector<int>& write_int_comp,
 					   const amrex::Vector<std::string>& int_comp_names) const
     {
-      auto const numParticleOnTile = pti.numParticles();
-      uint64_t const numParticleOnTile64 = static_cast<uint64_t>( numParticleOnTile );
-            
       // note: WarpX does not yet use extra AoS Real attributes
       StoreAoS_Real(pti, currSpecies, write_real_comp, real_comp_names, offset);
       StoreAoS_Int(pti, currSpecies, write_int_comp, int_comp_names, offset);    	

@@ -103,10 +103,13 @@ void testParticleMesh (TestParams& parms, int nghost)
     MyParticleContainer myPC(geom, dm, ba, rr);
     myPC.SetVerbose(false);
 
-    int num_particles = parms.nppc * parms.nx * parms.ny * parms.nz;
-    amrex::Print() << "Total number of particles    : " << num_particles << '\n' << '\n';
-
     bool serialize = true;
+    if (ParallelDescriptor::NProcs() > 1)
+        serialize = false;
+
+    amrex::Long num_particles = (amrex::Long)parms.nppc * parms.nx * parms.ny * parms.nz;
+    amrex::Print() << serialize<< " Total number of particles   :" << num_particles << '\n';
+
     int iseed = 451;
     double mass = 10.0;
 
@@ -367,6 +370,7 @@ int main(int argc, char* argv[])
   
   int nghost = 0 ;
   std::cout<<"  TODO: RESOLVE!!!  if nghost=1  there is tile offset be  at -1  "<<std::endl;
+
 #ifdef TEST_MESH_ONLY  
   testMeshOnly(parms, nghost);
 #else
