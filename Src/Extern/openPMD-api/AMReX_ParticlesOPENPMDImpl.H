@@ -1,42 +1,6 @@
 #ifndef AMREX_PTL_OPENPMD_API_IMPL_H
 #define AMREX_PTL_OPENPMD_API_IMPL_H
 
-/*
-template <int NStructReal, int NStructInt, int NArrayReal, int NArrayInt,
-          template<class> class Allocator>
-template <class F>
-void
-ParticleContainer<NStructReal, NStructInt, NArrayReal, NArrayInt, Allocator>
-::WritePlotFileOPENPMD (const std::string& dir,
-			const std::string& name,
-			const Vector<int>& write_real_comp,
-			const Vector<int>& write_int_comp,
-			const Vector<std::string>& real_comp_names,
-			const Vector<std::string>&  int_comp_names,
-			F&& f) const
-{
-  WriteBinaryParticleDataOPENPMD(dir, name, write_real_comp, write_int_comp, real_comp_names, int_comp_names,
-				 std::forward<F>(f));
-}
-
-template <int NStructReal, int NStructInt, int NArrayReal, int NArrayInt,
-          template<class> class Allocator>
-template <class F>
-void
-ParticleContainer<NStructReal, NStructInt, NArrayReal, NArrayInt, Allocator>
-::WriteBinaryParticleDataOPENPMD (const std::string& dir,
-				  const std::string& name,
-				  const Vector<int>& write_real_comp,
-				  const Vector<int>& write_int_comp,
-				  const Vector<std::string>& real_comp_names,
-				  const Vector<std::string>&  int_comp_names,
-				  F&& f,
-				  bool is_checkpoint) const
-{
-  amrex::Print()<<" TODO: WriteBinaryParticleData\n";
-}
-*/
-
 
 
 template <int NStructReal, int NStructInt, int NArrayReal, int NArrayInt,
