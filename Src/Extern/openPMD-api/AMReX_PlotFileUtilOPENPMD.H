@@ -21,58 +21,139 @@ namespace amrex
 {
   namespace openpmd_api
   {
-    //static std::vector<double> getReversedVec( const Real* v );    
-    
-    struct AMReX_BTDInfoField
+    namespace helper
     {
-      AMReX_BTDInfoField(int sid,  const amrex::Geometry& fbs):
-         snapshotID(sid), fullBTDSnapshot(fbs)
-      {}
+      inline void
+      setOpenPMDUnit ( openPMD::Mesh mesh, const std::string field_name )
+      {
+	if (field_name[0] == 'E'){
+	  mesh.setUnitDimension({
+	      {openPMD::UnitDimension::L,  1},
+	      {openPMD::UnitDimension::M,  1},
+	      {openPMD::UnitDimension::T, -3},
+	      {openPMD::UnitDimension::I, -1},
+	    });
+	} else if (field_name[0] == 'B'){
+	  mesh.setUnitDimension({
+	      {openPMD::UnitDimension::M,  1},
+	      {openPMD::UnitDimension::I, -1},
+	      {openPMD::UnitDimension::T, -2}
+	      });
+	}else if (field_name[0] == 'j'){ // current
+	  mesh.setUnitDimension({
+	      {openPMD::UnitDimension::L, -2},
+	      {openPMD::UnitDimension::I,  1},
+	    });
+        } else if (field_name.substr(0,3) == "rho"){ // charge density
+	  mesh.setUnitDimension({
+	      {openPMD::UnitDimension::L, -3},
+	      {openPMD::UnitDimension::I,  1},
+	      {openPMD::UnitDimension::T,  1},
+	    });
+        }
+      }
 
-      AMReX_BTDInfoField(int sid,  const amrex::Geometry&& fbs) = delete;
-      int snapshotID;
-      const amrex::Geometry& fullBTDSnapshot;
-    };
+      // from warpx Utils/RelativeCellPosition.cpp
+      inline std::vector< double >
+      getRelativeCellPosition(amrex::MultiFab const& mf)
+      {
+	amrex::IndexType const idx_type = mf.ixType();
 
+	std::vector< double > relative_position(AMREX_SPACEDIM, 0.0);
+	// amrex::CellIndex::CELL means: 0.5 from lower corner for that index/direction
+	// amrex::CellIndex::NODE means: at corner for that index/direction
+	// WarpX::do_nodal means: all indices/directions on CellIndex::NODE
+	for (int d = 0; d < AMREX_SPACEDIM; d++)
+	  {
+	    if (idx_type.cellCentered(d))
+	      relative_position.at(d) = 0.5;
+	  }
+	return relative_position;
+      }
 
-    void InitHandler(const std::string& filePath, bool isBTD);
+      inline std::vector<std::uint64_t>
+      getReversedVec( const IntVect& v )
+      {
+	// Convert the IntVect v to and std::vector u
+	std::vector<std::uint64_t> u = {
+	  AMREX_D_DECL(
+		       static_cast<std::uint64_t>(v[0]),
+		       static_cast<std::uint64_t>(v[1]),
+		       static_cast<std::uint64_t>(v[2])
+		       )
+	};
+	// Reverse the order of elements, if v corresponds to the indices of a
+	// Fortran-order array (like an AMReX FArrayBox)
+	// but u is intended to be used with a C-order API (like openPMD)
+	std::reverse( u.begin(), u.end() );
+
+	return u;
+      }
+
+      inline std::vector<double>
+      getReversedVec( const Real* v )
+      {
+	// Convert Real* v to and std::vector u
+	std::vector<double> u = {
+	  AMREX_D_DECL(
+		       static_cast<double>(v[0]),
+		       static_cast<double>(v[1]),
+		       static_cast<double>(v[2])
+		       )
+	};
+	// Reverse the order of elements, if v corresponds to the indices of a
+	// Fortran-order array (like an AMReX FArrayBox)
+	// but u is intended to be used with a C-order API (like openPMD)
+
+	std::reverse( u.begin(), u.end() );
+
+	return u;
+      }
+    }
+
+    struct AMReX_VarNameParser; // forward declaration
+    class AMReX_openPMDWriter;
+
+    /*
+    */
+
+    void UseCustomWriter(AMReX_openPMDWriter* w);
+
+    void InitHandler(const std::string& filePath);
+    //void SetCustomizer(AMReX_Optional* f);
     
     void SetStep(int ts);
     void CloseStep(int ts);    
     void CloseHandler();
     
     void WriteSingleLevel (//const std::string &plotfilename,
-                                          const MultiFab &mf,
-                                          const Vector<std::string> &varnames,
-                                          const Geometry &geom,
-                                          Real t,
-                                          int level_step,
-                                          const std::string &versionName = "HyperCLaw-V1.1",
-                                          const std::string &levelPrefix = "Level_",
-                                          const std::string &mfPrefix = "Cell",
-                                          const Vector<std::string>& extra_dirs = Vector<std::string>(),
-                                          AMReX_BTDInfoField* btd_info = NULL);
+			   const MultiFab &mf,
+			   const Vector<std::string> &varnames,
+			   const Geometry &geom,
+			   Real t,
+			   //int level_step,
+			   const std::string &ignored_versionName = "HyperCLaw-V1.1",
+			   const std::string &ignored_levelPrefix = "Level_",
+			   const std::string &ignored_mfPrefix = "Cell",
+			   const Vector<std::string>& ignored_extra_dirs = Vector<std::string>());
 
-     void WriteMultiLevel (//const std::string &plotfilename,
-                                         int nlevels,
-                                         const Vector<const MultiFab*> &mf,
-                                         const Vector<std::string> &varnames,
-                                         const Vector<Geometry> &geom,
-                                         Real time,
-                                         const Vector<int> &level_steps,
-                                         const Vector<IntVect> &ref_ratio,
-                                         const std::string &versionName = "HyperCLaw-V1.1",
-                                         const std::string &levelPrefix = "Level_",
-                                         const std::string &mfPrefix = "Cell",
-                                         const Vector<std::string>& extra_dirs = Vector<std::string>(),
-                                         AMReX_BTDInfoField* btd_info = NULL);
-    
-    template<class PC>
-    void WriteParticles(PC const&  pc);
+     void WriteMultiLevel (
+			   //int nlevels, will all levels in mf & geom
+			   const Vector<const MultiFab*> &mf,
+			   const Vector<std::string> &varnames,
+			   const Vector<Geometry> &geom,
+			   Real time,
+			   //const Vector<int> &level_steps,
+			   const Vector<IntVect> &ref_ratio,
+			   const std::string &ignored_versionName = "HyperCLaw-V1.1",
+			   const std::string &ignored_levelPrefix = "Level_",
+			   const std::string &ignored_mfPrefix = "Cell",
+			   const Vector<std::string>& ignored_extra_dirs = Vector<std::string>());
 
 
     ////////////////////////////    
-    struct AMReX_VarNameParser {
+    struct AMReX_VarNameParser
+    {
       AMReX_VarNameParser(std::string varname);
 
       void GetFieldNameModeInt(const std::string& varname);
@@ -96,51 +177,28 @@ namespace amrex
 	  }
       }
 
-      inline std::vector< std::string >
+      virtual  std::vector< std::string >
       getFieldAxisLabels () const
       {
         using vs = std::vector< std::string >;
-	if (0) {
-	  /* TODO warpx specific 
-	  // Fortran order of the index labels for the AMReX FArrayBox
-#if defined(WARPX_DIM_1D_Z)
-	  vs const axisLabels{"z"};  // z varies fastest in memory
-#elif defined(WARPX_DIM_XZ)
-	  vs const axisLabels{"x", "z"};  // x varies fastest in memory
-#elif defined(WARPX_DIM_RZ)
-	  // when we write individual modes of a field (default)
-	  vs const circAxisLabels{"r", "z"};  // r varies fastest in memory
-	  // if we just write reconstructed 2D fields at theta=0
-	  vs const cartAxisLabels{"x", "z"};  // x varies fastest in memory
-	  vs const axisLabels = m_ThetaMode ? circAxisLabels : cartAxisLabels;
-#elif defined(WARPX_DIM_3D)
-	  vs const axisLabels{"x", "y", "z"};  // x varies fastest in memory	
-#else
-#   error Unknown WarpX dimensionality.
-#endif
-	  // revert to C order (fastest varying index last)
-	  return {axisLabels.rbegin(), axisLabels.rend()};	  
-	  */
-	} else {
-	  // temporary resolution
+
+	// temporary resolution
 #if AMREX_SPACEDIM == 1
-	  vs const axisLabels{"z"};  
+	vs const axisLabels{"z"};
 #elif AMREX_SPACEDIM == 2
-	  vs const axisLabels{"x", "z"};  
+	vs const axisLabels{"x", "z"};
 #elif AMREX_SPACEDIM == 3
-	  vs const axisLabels{"x", "y", "z"};  // x varies fastest in memory
+	vs const axisLabels{"x", "y", "z"};  // x varies fastest in memory
 #else
 #  error Unable to label more than 3d
-	  std::cout<<"TODO  ... SPACEDIM = 0? "<<std::endl;
-	  vs const axisLabels{}
+	// no labels to be addressed
+	vs const axisLabels{}
 #endif
-	  // revert to C order (fastest varying index last)
-	  return {axisLabels.rbegin(), axisLabels.rend()};
-	  
-	}
+	// revert to C order (fastest varying index last)
+	return {axisLabels.rbegin(), axisLabels.rend()};
       } // getFieldAxisLabels
 
-      
+
       /////  members      
       std::string m_FieldName;
       std::string m_CompName;
@@ -151,36 +209,6 @@ namespace amrex
 
 
     ////////////////////////////
-    /*
-    class AMReX_ParticleCounter
-    {
-    public:
-      //using ParticleContainer = typename WarpXParticleContainer::ContainerLike<amrex::PinnedArenaAllocator>;
-      using ParticleContainer  = ContainerLike<amrex::PinnedArenaAllocator>;
-      using ParticleIter = typename amrex::ParIter<0, 0, PIdx::nattribs, 0, amrex::PinnedArenaAllocator>;
-      
-      AMReX_ParticleCounter (ParticleContainer* pc);
-      unsigned long GetTotalNumParticles () {return m_Total;}
-      
-      std::vector<unsigned long long> m_ParticleOffsetAtRank;
-      std::vector<unsigned long long> m_ParticleSizeAtRank;
-    private:
-
-      void GetParticleOffsetOfProcessor (const long& numParticles,
-					 unsigned long long& offset,
-					 unsigned long long& sum)  const ;
-      
-      
-      int m_MPIRank = 0;
-      int m_MPISize = 1;
-
-      unsigned long long m_Total = 0;
-      
-      std::vector<unsigned long long> m_ParticleCounterByLevel;
-};
-    */
-    
-
     ////////////////////////////    
     class AMReX_openPMDWriter {
     public:      
@@ -188,43 +216,84 @@ namespace amrex
 			  openPMD::IterationEncoding ie,
 			  std::string filetype,
 			  std::string openpmdOptions);
+
+      AMReX_openPMDWriter();
       
       virtual ~AMReX_openPMDWriter();
-      //std::vector<bool> fieldPMLdirections);
 
       virtual openPMD::Iteration GetIteration (int const iteration) const
       {
-	// double check reached here
 	return m_Series->writeIterations()[iteration];	
       }
+
       virtual void SetStep(int ts);
       virtual void CloseStep(int ts);
       virtual void Init(openPMD::Access access);
-      
+
       virtual void WriteMesh(const std::vector<std::string>& varnames,
 			     const amrex::Vector<const amrex::MultiFab*>& mf,
 			     const amrex::Vector<amrex::Geometry>& geom,
-			     int output_levels,
-			     const Vector<int> &iteration,
-			     //const int iteration,
+			     //const Vector<int> &iteration,
+			     //const int iteration, /* note:  all levels are outputing the same step */
 			     const double time ) const;
 
       template<class PC>
       void DumpParticles(PC const& pc,
 			 const std::string& name,
-			 int iteration,
-			 const amrex::Vector<int>& write_real_comp,
-			 const amrex::Vector<int>& write_int_comp,
+			 //const int iteration,
+			 const amrex::Vector<int>& write_real_comp, // size = NStructReal + NArrayReal
+			 const amrex::Vector<int>& write_int_comp,  // size = NStructInt  + NArrayInt
 			 const amrex::Vector<std::string>& real_comp_names,
 			 const amrex::Vector<std::string>&  int_comp_names
 			 ) const;
 
-      void SetupPos(openPMD::ParticleSpecies& species, const unsigned long long& np) const;
+      template<class PC, typename FUNC_pc, typename FUNC_pit>
+      void DumpParticles(PC const& pc,
+			 const std::string& name,
+			 //const int iteration,
+			 const amrex::Vector<int>& write_real_comp, // size = NStructReal + NArrayReal
+			 const amrex::Vector<int>& write_int_comp,  // size = NStructInt  + NArrayInt
+			 const amrex::Vector<std::string>& real_comp_names,
+			 const amrex::Vector<std::string>&  int_comp_names,
+			 FUNC_pc&& pcFunc,
+			 FUNC_pit&& pitFunc
+			 ) const;
 
+      virtual void AllocatePtlProperties(openPMD::ParticleSpecies& currSpecies,
+					 const amrex::Vector<int>& write_real_comp,
+					 const amrex::Vector<std::string>& real_comp_names,
+					 const amrex::Vector<int>& write_int_comp,
+					 const amrex::Vector<std::string>& int_comp_names,
+					 const unsigned long long np) const;
+
+      virtual void SetParticleSpecieAttributes(openPMD::ParticleSpecies& currSpecies) const
+      {}
+
+      void SetupPos(openPMD::ParticleSpecies& species, const unsigned long long& np) const;
+      virtual unsigned long long GetGrandOffset() const; // to adjust offset/total with data already flushed,  example use case: BTD
+
+      // called once because it is constant valued record
+      virtual void SetupConstant(openPMD::ParticleSpecies& currSpecies,
+				 const unsigned long long& np) const;
+
+      virtual std::vector< std::string >
+      getParticlePositionComponentLabels() const
+      {
+#if (AMREX_SPACEDIM == 3)
+	std::vector< std::string > const positionComponents{"x", "y", "z"};
+#elif (AMREX_SPACEDIM == 2)
+	std::vector< std::string > const positionComponents{"x", "y"};
+#elif (AMREX_SPACEDIM == 1)
+	std::vector< std::string > const positionComponents{"x"};
+#else
+#   error Unknown dimensionality.
+#endif
+	return positionComponents;
+      }
 
       template<class PC>
       void
-      SetupRealProperties(PC const& pc, 
+      SetupRealProperties(PC const& pc,
 			  openPMD::ParticleSpecies& currSpecies,
 			  const amrex::Vector<int>& write_real_comp,
 			  const amrex::Vector<std::string>& real_comp_names,
@@ -235,7 +304,7 @@ namespace amrex
       */
       template<class PIt>
       void
-      SaveRealProperty (PIt& pti, //int, int,                                                                        
+      SaveRealProperty (PIt& pti,
 			openPMD::ParticleSpecies& currSpecies,
 			unsigned long long offset,
 			const amrex::Vector<int>& write_real_comp,
@@ -249,8 +318,11 @@ namespace amrex
 
       int m_openPMDMinDigits = 6;
       std::string m_openPMDDatasetOptions = "{}"; 
-      
-    private:
+
+      openPMD::IterationEncoding  m_openPMDEncoding = openPMD::IterationEncoding::fileBased;
+
+
+    protected:
       void CompSetup(int lev,
 		     openPMD::Container< openPMD::Mesh >& meshes,
 		     amrex::Geometry& full_geom,
@@ -264,15 +336,14 @@ namespace amrex
 		       const amrex::MultiFab* mf) const;
 
 
-      void SetupFields (openPMD::Container< openPMD::Mesh >& meshes,			
+      virtual void SetupFields (openPMD::Container< openPMD::Mesh >& meshes,
 			amrex::Geometry& full_geom) const;
 
-      void SetupMeshComp (openPMD::Mesh& mesh,					     
+      virtual void SetupMeshComp (openPMD::Mesh& mesh,
 			  amrex::Geometry& full_geom,
 			  amrex::MultiFab const& mf,
 			  const AMReX_VarNameParser& varName) const;
 
-     
       void GetFileName(std::string& filepath);
 
       template<class PIt>
@@ -282,7 +353,12 @@ namespace amrex
 			 const amrex::Vector<std::string>& real_comp_names,			 
 			 unsigned long long offset) const;
 
-      
+      template<class PIt>
+      void
+      SavePosId(PIt& pti,
+		openPMD::ParticleSpecies& currSpecies,
+		unsigned long long offset) const;
+
       template<class PIt>
       void
       StoreAoS_Int(PIt& pti,
@@ -308,58 +384,24 @@ namespace amrex
 		       unsigned long long offset) const;
       
       int m_CurrentStep = -1;
-      openPMD::IterationEncoding  m_openPMDEncoding = openPMD::IterationEncoding::fileBased;
+
       std::string m_openPMDFileType = "bp";
       std::string m_openPMDSeriesOptions = std::string();
     };
 
-    ////////////////////////////    
-    class AMReX_openPMDWriterBTD final : public AMReX_openPMDWriter
-    {
-    public:
-      AMReX_openPMDWriterBTD(const std::string& prefix,
-			     openPMD::IterationEncoding ie,
-			     std::string filetype,
-			     std::string openpmdOptions);
-
-      ~AMReX_openPMDWriterBTD() override = default;
-      openPMD::Iteration GetIteration (int const iteration) const override
-      {
-	// double check reached here
-	return m_Series->iterations[iteration];
-      }
-
-      //void SetStep(int ts);
-      void CloseStep(int ts) override;
-
-      void Init(openPMD::Access access) override;
-
-      void WriteMesh(const std::vector<std::string>& varnames,
-		     const amrex::Vector<const amrex::MultiFab*>& mf,
-		     const amrex::Vector<amrex::Geometry>& geom,
-		     int output_levels,
-		     const Vector<int> &iteration,
-		     //const iteration,
-		     const double time ) const override;
-
-      //void WriteMesh() override;
-    private:
-
-    };
 
 
     ////////////////////////////
     class AMReX_openPMDHandler {
     public:
-      AMReX_openPMDHandler(const std::string& prefix = std::string(),
-			   bool isBTD=false);
+      AMReX_openPMDHandler(const std::string& prefix = std::string());
+
       ~AMReX_openPMDHandler();      
       
       std::unique_ptr<AMReX_openPMDWriter> m_Writer = nullptr;
       
     private:
       void CreateWriter(const std::string& prefix = std::string());
-      bool m_IsBTD;
       
     }; // class AMReX_openPMDHandler
     

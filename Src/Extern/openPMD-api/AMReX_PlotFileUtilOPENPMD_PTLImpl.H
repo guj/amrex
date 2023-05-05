@@ -7,22 +7,142 @@ namespace amrex
   namespace openpmd_api
   {
     extern  std::unique_ptr< amrex::openpmd_api::AMReX_openPMDHandler > m_OpenPMDHandler;
-    ////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////
     //
     // Global function to write particle container
+    //   each WriteParticles() call has two versions:
+    //   with FUNC(for user supploed saveposid) or not (using default from the writer)
     //
-    ////////////////////////////////////
-    template<class PC>
-    void WriteParticles(PC const&  pc)
+    ////////////////////////////////////////////////////////////////////////
+
+    template<class PC, typename FUNC_pc, typename FUNC_pit>
+    void WriteParticles(PC const&  pc,
+			const std::string& specieName,
+			//int iteration,
+			const Vector<std::string>& real_comp_names,
+			const Vector<std::string>& int_comp_names,
+			const Vector<int>& do_write_real_comp,
+			const Vector<int>& do_write_int_comp,
+			FUNC_pc&& pcFunc,
+			FUNC_pit&& posIdFunc)
     {
       BL_PROFILE("amrex::openpmd_api::WriteParticles()");
+
+      amrex::Print()<<"   Real: "<<pc.NStructReal<<" "<<pc.NumRealComps()<<"\n";
+      amrex::Print()<<"   Int:  "<<pc.NStructInt<<" "<<pc.NumIntComps()<<"\n";
+
       if ((m_OpenPMDHandler == nullptr) || (m_OpenPMDHandler->m_Writer == nullptr))
 	return;
 
-      amrex::Print()<<" TODO: WriteParticles() using made up names \n";
+      AMREX_ASSERT( do_write_real_comp.size() <= real_comp_names.size() );
+      AMREX_ASSERT( do_write_int_comp.size()  <= int_comp_names.size()  );
+      AMREX_ASSERT( real_comp_names.size()    <= pc.NStructReal + pc.NumRealComps() );
+
+      m_OpenPMDHandler->m_Writer->DumpParticles(pc, specieName, //iteration,
+						do_write_real_comp, do_write_int_comp, real_comp_names, int_comp_names,
+						pcFunc, posIdFunc);
+    }
+
+    // use default pos_id func
+    template<class PC>
+    void WriteParticles(PC const&  pc,
+			const std::string& specieName,
+			//int iteration,
+			const Vector<std::string>& real_comp_names,
+			const Vector<std::string>& int_comp_names,
+			const Vector<int>& do_write_real_comp,
+			const Vector<int>& do_write_int_comp)
+    {
+      BL_PROFILE("amrex::openpmd_api::WriteParticles(..)");
+
       amrex::Print()<<"   Real: "<<pc.NStructReal<<" "<<pc.NumRealComps()<<"\n";
       amrex::Print()<<"   Int:  "<<pc.NStructInt<<" "<<pc.NumIntComps()<<"\n";
-      
+
+      if ((m_OpenPMDHandler == nullptr) || (m_OpenPMDHandler->m_Writer == nullptr))
+	return;
+
+      AMREX_ASSERT( do_write_real_comp.size() <= real_comp_names.size() );
+      AMREX_ASSERT( do_write_int_comp.size()  <= int_comp_names.size()  );
+      AMREX_ASSERT( real_comp_names.size()    <= pc.NStructReal + pc.NumRealComps() );
+
+      m_OpenPMDHandler->m_Writer->DumpParticles(pc, specieName, //iteration,
+						do_write_real_comp, do_write_int_comp, real_comp_names, int_comp_names);
+    }
+
+    template<class PC>
+    void WriteParticles(PC const&  pc,
+			const std::string& specieName,
+			//int iteration,
+			const Vector<std::string>& real_comp_names,
+			const Vector<std::string>& int_comp_names)
+    {
+      Vector<int> write_real_comp;
+
+      for (int i = 0; i < real_comp_names.size(); ++i )
+	{
+	  write_real_comp.push_back(1);
+	}
+
+      Vector<int> write_int_comp;
+      for (int i = 0; i < int_comp_names.size(); ++i )
+	{
+	  write_int_comp.push_back(1);
+	}
+
+      WriteParticles(pc, specieName, //iteration,
+		     real_comp_names, int_comp_names,
+		     write_real_comp, write_int_comp);
+    }
+
+
+    template<class PC>
+    void WriteParticles(PC const&  pc,
+			const std::string& specieName)
+    {
+      Vector<int> write_real_comp;
+      Vector<std::string> real_comp_names;
+
+      for (int i = 0; i < pc.NStructReal + pc.NumRealComps(); ++i )
+	{
+	  write_real_comp.push_back(1);
+
+	  std::stringstream ss;
+	  if (i < pc.NStructReal)
+	    ss << "aos-r_" << i;
+	  else
+	    ss << "SoA-r" << i;
+
+	  real_comp_names.push_back(ss.str());
+	}
+
+      Vector<int> write_int_comp;
+      Vector<std::string> int_comp_names;
+      for (int i = 0; i < pc.NStructInt + pc.NumIntComps(); ++i )
+	{
+	  write_int_comp.push_back(1);
+	  std::stringstream ss;
+
+	  if (i < pc.NStructInt)
+	    ss << "aos-i_" << i;
+	  else
+	    ss << "SoA-i" << i;
+
+	  int_comp_names.push_back(ss.str());
+	}
+
+      WriteParticles(pc, specieName, //iteration,
+		     real_comp_names, int_comp_names,
+		     write_real_comp, write_int_comp);
+    }
+
+
+    template<class PC, typename FUNC_pc, typename FUNC_pit>
+    void WriteParticles(PC const&  pc,
+			const std::string& specieName,
+			FUNC_pc&& pcFunc,
+			FUNC_pit&& pitFunc
+			)
+    {
       Vector<int> write_real_comp;
       Vector<std::string> real_comp_names;
 
@@ -32,9 +152,9 @@ namespace amrex
 	  
 	  std::stringstream ss;
 	  if (i < pc.NStructReal) 
-	    ss << "RealType-" << i;
+	    ss << "aos-r_" << i;
 	  else
-	    ss << "Real_comp" << i;
+	    ss << "SoA-r" << i;
 	  
 	  real_comp_names.push_back(ss.str());
 	}
@@ -47,17 +167,15 @@ namespace amrex
 	  std::stringstream ss;
 
 	  if (i < pc.NStructInt) 
-	    ss << "IntType" << i;
+	    ss << "aos-i_" << i;
 	  else
-	    ss << "Int_comp" << i;
-	  
+	    ss << "SoA-i" << i;
 	  int_comp_names.push_back(ss.str());
 	}
 
-      std::string specieName = "testSpecie"; // TODO find the right mapping
-      int iteration = 3; // TODO 
-      m_OpenPMDHandler->m_Writer->DumpParticles(pc, specieName, iteration,						
-						write_real_comp, write_int_comp, real_comp_names, int_comp_names);
+      WriteParticles(pc, specieName, //iteration,
+		     real_comp_names, int_comp_names,
+		     write_real_comp, write_int_comp, pcFunc, pitFunc);
     }
   
     namespace helper {
@@ -115,34 +233,6 @@ namespace amrex
 	return uint64_t(id) | uint64_t(cpu) << 32u;
       }
       
-      inline std::vector< std::string >
-      getParticlePositionComponentLabels()
-      {
-	/*
-	  TODO from WarpX, how do we handler RZ/ XZ?
-	using vs = std::vector< std::string >;	
-#if defined(WARPX_DIM_XZ)
-	vs const positionComponents{"x", "z"};
-#elif defined(WARPX_DIM_RZ)
-	// note: this will change when we back-transform
-	//       z,r,theta on the fly to cartesian coordiantes
-	vs const positionComponents{"r", "z"};
-#elif (AMREX_SPACEDIM==3)
-	vs const positionComponents{"x", "y", "z"};
-#else
-#   error Unknown WarpX dimensionality.
-#endif
-	return positionComponents;
-	*/
-	
-#if (AMREX_SPACEDIM==3)    
-	std::vector< std::string > const positionComponents{"x", "y", "z"};
-#else
-#   error Unknown dimensionality.
-#endif
-	return positionComponents;
-      }
-      
 
        inline std::pair< std::string, std::string >
        name2openPMD ( std::string const& fullName )
@@ -192,9 +282,9 @@ namespace amrex
       
       // first we concatinate the AoS into contiguous arrays
       {
-	for( auto idx=0; idx<PIt::ContainerType::NStructReal; idx++ )   // lgtm [cpp/constant-comparison]
+	for( auto idx=0; idx<PIt::ContainerType::NStructReal; idx++ )
 	  {
-	    if( write_real_comp[idx] ) { 
+	    if( write_real_comp[idx] ) {
 	      const auto [record_name, component_name] = helper::name2openPMD(real_comp_names[idx]);
 	      auto currRecord = currSpecies[record_name];
 	      auto currRecordComp = currRecord[component_name];
@@ -208,7 +298,6 @@ namespace amrex
 		d.get()[kk] = aos[kk].rdata(idx);
 	      
 	      currRecordComp.storeChunk(d, {offset}, {numParticleOnTile64});	      
-	      
 	    }
 	  }
       }
@@ -263,12 +352,8 @@ namespace amrex
       auto const numParticleOnTile = pti.numParticles();
       uint64_t const numParticleOnTile64 = static_cast<uint64_t>( numParticleOnTile );
 
-      // TODO warpx provides only the comps(NRealComp), while AMReX expects  all
-      //      need to find a way to support WarpX choices
-      
-      //auto const real_counter = std::min(write_real_comp.size(), real_comp_names.size());
       auto const real_counter = std::min(write_real_comp.size(), real_comp_names.size()) - PIt::ContainerType::NStructReal;
-      
+
       for (auto idx=0; idx<real_counter; idx++)
 	{
 	  auto ii = PIt::ContainerType::NStructReal + idx;  // jump over extra AoS names
@@ -295,7 +380,6 @@ namespace amrex
       auto const numParticleOnTile = pti.numParticles();
       uint64_t const numParticleOnTile64 = static_cast<uint64_t>( numParticleOnTile );
 
-      // TODO, waprx provides only comp names while AMReX expects all
       auto const int_counter = std::min(write_int_comp.size(), int_comp_names.size()) - PIt::ContainerType::NStructInt;	
       for (auto idx=0; idx<int_counter; idx++)
 	{
@@ -309,6 +393,50 @@ namespace amrex
 	}
     }
     
+
+    template<class PIt>
+    void
+    AMReX_openPMDWriter::SavePosId(PIt& pti,
+				   openPMD::ParticleSpecies& currSpecies,
+				   unsigned long long offset) const
+    {
+      BL_PROFILE("amrex::openpmd_api::SavePosId(default..)");
+      auto const numParticleOnTile = pti.numParticles();
+      uint64_t const numParticleOnTile64 = static_cast<uint64_t>( numParticleOnTile );
+
+      // get position and particle ID from aos
+      // note: this implementation iterates the AoS 4x...
+      // if we flush late as we do now, we can also copy out the data in one go
+      const auto& aos = pti.GetArrayOfStructs();  // size =  numParticlesOnTile
+      {
+	// Save positions
+	auto const positionComponents = /*helper::*/getParticlePositionComponentLabels();
+
+	for (auto currDim = 0; currDim < AMREX_SPACEDIM; currDim++)
+	  {
+	    std::shared_ptr<amrex::ParticleReal> curr(new amrex::ParticleReal[numParticleOnTile],
+						      [](amrex::ParticleReal const *p) { delete[] p; }
+						      );
+	    for (auto i = 0; i < numParticleOnTile; i++) {
+	      curr.get()[i] = aos[i].pos(currDim);
+	    }
+	    std::string const positionComponent = positionComponents[currDim];
+	    currSpecies["position"][positionComponent].storeChunk(curr, {offset + GetGrandOffset()}, {numParticleOnTile64});
+	  }
+
+	// save particle ID after converting it to a globally unique ID
+	std::shared_ptr< uint64_t > ids(new uint64_t[numParticleOnTile],
+					[](uint64_t const *p){ delete[] p; }
+					);
+	for (auto i=0; i<numParticleOnTile; i++)
+	  {
+	    ids.get()[i] = helper::localIDtoGlobal(aos[i].id(), aos[i].cpu());
+	  }
+	auto const scalar = openPMD::RecordComponent::SCALAR;
+	currSpecies["id"][scalar].storeChunk(ids, {offset + GetGrandOffset()}, {numParticleOnTile64});
+      }
+    }
+
     
     template<class PIt>
     void
@@ -329,7 +457,7 @@ namespace amrex
       StoreSoAInt(pti, currSpecies, write_int_comp, int_comp_names, offset);
     }
 
-    
+
 
 
     ////////////////////////////////////
@@ -337,15 +465,37 @@ namespace amrex
     // AMReX_openPMDWriter::DumpParticles()
     //
     ////////////////////////////////////
-    
+
     template<class PC>
     void AMReX_openPMDWriter::DumpParticles(PC const& pc,
 					    const std::string& name,
-					    int iteration,
+					    //int iteration,
 					    const amrex::Vector<int>& write_real_comp,
 					    const amrex::Vector<int>& write_int_comp,
 					    const amrex::Vector<std::string>& real_comp_names,
-					    const amrex::Vector<std::string>&  int_comp_names
+					    const amrex::Vector<std::string>& int_comp_names
+					    ) const
+    {
+      DumpParticles(pc, name, write_real_comp, write_int_comp, real_comp_names, int_comp_names,
+		    [=] (auto& pc, openPMD::ParticleSpecies& currSpecies, unsigned long long size)
+		    {
+		    }, // no extra pc level info to save
+		    [=] (auto& pti, openPMD::ParticleSpecies& currSpecies, unsigned long long offset)
+		    {
+		      SavePosId(pti, currSpecies, offset); // default way of save pos & id
+		    });
+    }
+
+    template<class PC, typename FUNC_pc, typename FUNC_pit>
+    void AMReX_openPMDWriter::DumpParticles(PC const& pc,
+					    const std::string& name,
+					    //int iteration,
+					    const amrex::Vector<int>& write_real_comp,
+					    const amrex::Vector<int>& write_int_comp,
+					    const amrex::Vector<std::string>& real_comp_names,
+					    const amrex::Vector<std::string>& int_comp_names,
+					    FUNC_pc&& pc_func,
+					    FUNC_pit&& posId_func
 					    ) const
     {
       AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_Series != nullptr, "openPMD series must be initialized");
@@ -354,59 +504,25 @@ namespace amrex
       //     Count is not a const function
       //pc.CountParticles();
       
-      openPMD::Iteration currIteration = m_Series->iterations[iteration];
+      openPMD::Iteration currIteration = GetIteration( m_CurrentStep );
       openPMD::ParticleSpecies currSpecies = currIteration.particles[name];
-      /*
-      // TODO WarpX specific attributes
-      // meta data for ED-PIC extension
-      currSpecies.setAttribute( "particleShape", double( WarpX::noz ) );
 
-      currSpecies.setAttribute( "particleShapes", [](){
-	return std::vector< double >{
-          double(WarpX::nox),
-#if AMREX_SPACEDIM==3
-          double(WarpX::noy),
-#endif
-          double(WarpX::noz)
-	};
-      }() );
-      
-      currSpecies.setAttribute( "particlePush", [](){
-	switch( WarpX::particle_pusher_algo ) {
-	case ParticlePusherAlgo::Boris : return "Boris";
-	case ParticlePusherAlgo::Vay : return "Vay";
-	case ParticlePusherAlgo::HigueraCary : return "HigueraCary";
-	default: return "other";
-	}
-      }() );
-      currSpecies.setAttribute( "particleInterpolation", [](){
-	switch( WarpX::field_gathering_algo ) {
-	case GatheringAlgo::EnergyConserving : return "energyConserving";
-	case GatheringAlgo::MomentumConserving : return "momentumConserving";
-	default: return "other";
-	}
-      }() );
-      currSpecies.setAttribute( "particleSmoothing", "none" );
-      currSpecies.setAttribute( "currentDeposition", [](){
-	switch( WarpX::current_deposition_algo ) {
-	case CurrentDepositionAlgo::Esirkepov : return "Esirkepov";
-	default: return "directMorseNielson";
-	}
-      }() );
-      */
       //
       // define positions & offsets
       //
+      AllocatePtlProperties(currSpecies, write_real_comp, real_comp_names, write_int_comp, int_comp_names,
+			    pc.m_PtlCounter.GetTotalNumParticles());
 
-      SetupPos(currSpecies, pc.m_PtlCounter.GetTotalNumParticles());
-
-      //SetupRealProperties(currSpecies, write_real_comp, real_comp_names, pc.m_PtlCounter.GetTotalNumParticles());
       SetupRealProperties(pc, currSpecies, write_real_comp, real_comp_names, write_int_comp, int_comp_names,
 			  pc.m_PtlCounter.GetTotalNumParticles());
-      
+
+      SetupConstant(currSpecies, pc.m_PtlCounter.GetTotalNumParticles());
+
+      pc_func(pc, currSpecies, pc.m_PtlCounter.GetTotalNumParticles());
       // open files from all processors, in case some will not contribute below
       m_Series->flush();
-      
+
+      bool emptyPC = true;
       for (auto currentLevel = 0; currentLevel <= pc.finestLevel(); currentLevel++)
 	{
 	  uint64_t offset = static_cast<uint64_t>( pc.m_PtlCounter.m_ParticleOffsetAtRank[currentLevel] );
@@ -417,52 +533,30 @@ namespace amrex
 	    {
 	      auto const numParticleOnTile = pti.numParticles();
 	      uint64_t const numParticleOnTile64 = static_cast<uint64_t>( numParticleOnTile );
-	    
-	      // get position and particle ID from aos
-	      // note: this implementation iterates the AoS 4x...
-	      // if we flush late as we do now, we can also copy out the data in one go
-	      const auto& aos = pti.GetArrayOfStructs();  // size =  numParticlesOnTile
-	      {
-		// Save positions
-		auto const positionComponents = helper::getParticlePositionComponentLabels();
-		
-		for (auto currDim = 0; currDim < AMREX_SPACEDIM; currDim++)
-		  {
-		    std::shared_ptr<amrex::ParticleReal> curr(new amrex::ParticleReal[numParticleOnTile],
-							      [](amrex::ParticleReal const *p) { delete[] p; }
-							      );
-		    for (auto i = 0; i < numParticleOnTile; i++) {
-		      curr.get()[i] = aos[i].pos(currDim);
-		    }
-		    std::string const positionComponent = positionComponents[currDim];
-		    currSpecies["position"][positionComponent].storeChunk(curr, {offset}, {numParticleOnTile64});
-		  }
-		
-		// save particle ID after converting it to a globally unique ID
-		std::shared_ptr< uint64_t > ids(new uint64_t[numParticleOnTile],
-						[](uint64_t const *p){ delete[] p; }					      
-						);
-		for (auto i=0; i<numParticleOnTile; i++)
-		  {
-		    ids.get()[i] = helper::localIDtoGlobal(aos[i].id(), aos[i].cpu());
-		  }
-		auto const scalar = openPMD::RecordComponent::SCALAR;
-		currSpecies["id"][scalar].storeChunk(ids, {offset}, {numParticleOnTile64});
-	      }
-	      
+
+	      // Do not call storeChunk() with zero-sized particle tiles:
+	      //   https://github.com/openPMD/openPMD-api/issues/1147
+	      //   https://github.com/ECP-WarpX/WarpX/pull/1898#discussion_r745008290
+	      if (numParticleOnTile == 0) continue;
+
+	      emptyPC = false;
+
+	      //SavePosId(pti, currSpecies, offset);
+	      posId_func(pti, currSpecies, offset);
 	      //  save "extra" particle properties in AoS and SoA
 	      SaveRealProperty(pti,
 			       currSpecies,
-			       offset,
+			       offset + GetGrandOffset(),
 			       write_real_comp,real_comp_names,
 			       write_int_comp, int_comp_names);
 	      
 	      offset += numParticleOnTile64;
 	  }
 	}
-      m_Series->flush();      
+
+      // TODO adiosWorkaround with empty rank reading error();
+      m_Series->flush();
     }
-    
 
 
     template<class PC>
@@ -474,27 +568,8 @@ namespace amrex
 						   const amrex::Vector<std::string>& int_comp_names,
 						   const unsigned long long np) const
     {
-      // Allocate _all_ datasets of dtype. 
-      // handle scalar and non-scalar records by name      
-      auto const lf_compRecordInit = [&currSpecies](const amrex::Vector<int>& write_comp,
-						    const amrex::Vector<std::string>& comp_names,
-						    openPMD::Dataset& dtype)
-      {
-	auto const min_counter = std::min(write_comp.size(), comp_names.size());
-	for (int i = 0; i < min_counter; ++i)
-	  {
-	    if (write_comp[i]) {
-	      helper::getComponentRecord(currSpecies,  comp_names[i]).resetDataset(dtype);
-	    }
-	  }	
-      };
-      
-      auto dtype_real = openPMD::Dataset(openPMD::determineDatatype<amrex::ParticleReal>(), {np}, m_openPMDDatasetOptions);
-      lf_compRecordInit(write_real_comp, real_comp_names, dtype_real);
-      
-      auto dtype_int  = openPMD::Dataset(openPMD::determineDatatype<int>(), {np}, m_openPMDDatasetOptions);
-      lf_compRecordInit(write_int_comp, int_comp_names, dtype_int);
 
+      //AllocateRealProperties(currSpecies, write_real_comp, real_comp_names, write_int_comp, int_comp_names, np);
 
       // set attributes for some properties
       std::set< std::string > addedRecords; // add meta-data per record only once
