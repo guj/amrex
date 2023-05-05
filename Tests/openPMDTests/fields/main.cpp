@@ -110,15 +110,14 @@ struct TestField
 void saveFile(char* fname,  const InputParams& inputs, const TestField& testField)
 {
 #ifdef AMREX_USE_OPENPMD_API
-  bool isBTD = false;
-  openpmd_api::InitHandler(fname, isBTD);
+  openpmd_api::InitHandler(fname);
 
   for (int ts = 0; ts < inputs.nplotfile; ts++)
     {
       openpmd_api::SetStep(ts);
       openpmd_api::WriteMultiLevel(//fname,
-				   inputs.nlevs, amrex::GetVecOfConstPtrs(testField.m_mf), testField.m_Varnames,
-				   testField.m_Geom, testField.m_Time, testField.m_Level_steps, testField.m_Ref_ratio);
+				   amrex::GetVecOfConstPtrs(testField.m_mf), testField.m_Varnames,
+				   testField.m_Geom, testField.m_Time, /*testField.m_Level_steps,*/ testField.m_Ref_ratio);
       openpmd_api::CloseStep(ts);
       
       //saveFile(fname, ts, inputs, testField);	
