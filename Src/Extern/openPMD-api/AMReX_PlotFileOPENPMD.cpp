@@ -19,94 +19,6 @@
 namespace amrex {
   namespace openpmd_api {
 
-    // from warpx Utils/RelativeCellPosition.cpp 
-    std::vector< double >
-    getRelativeCellPosition(amrex::MultiFab const& mf)
-    {
-      amrex::IndexType const idx_type = mf.ixType();
-      
-      std::vector< double > relative_position(AMREX_SPACEDIM, 0.0);
-      // amrex::CellIndex::CELL means: 0.5 from lower corner for that index/direction
-      // amrex::CellIndex::NODE means: at corner for that index/direction
-      // WarpX::do_nodal means: all indices/directions on CellIndex::NODE
-      for (int d = 0; d < AMREX_SPACEDIM; d++)
-	{
-	  if (idx_type.cellCentered(d))
-            relative_position.at(d) = 0.5;
-	}
-      return relative_position;
-    }
-
-    
-    static  std::vector<std::uint64_t>
-    getReversedVec( const IntVect& v )
-    {
-      // Convert the IntVect v to and std::vector u
-      std::vector<std::uint64_t> u = {
-	AMREX_D_DECL(
-		     static_cast<std::uint64_t>(v[0]),
-		     static_cast<std::uint64_t>(v[1]),
-		     static_cast<std::uint64_t>(v[2])
-		     )
-      };
-      // Reverse the order of elements, if v corresponds to the indices of a
-      // Fortran-order array (like an AMReX FArrayBox)
-      // but u is intended to be used with a C-order API (like openPMD)
-      std::reverse( u.begin(), u.end() );
-      
-      return u;
-    }
-
-    static std::vector<double> getReversedVec( const Real* v )
-    {
-      // Convert Real* v to and std::vector u
-      std::vector<double> u = {
-	AMREX_D_DECL(
-		     static_cast<double>(v[0]),
-		     static_cast<double>(v[1]),
-		     static_cast<double>(v[2])
-		     )
-      };
-      // Reverse the order of elements, if v corresponds to the indices of a
-      // Fortran-order array (like an AMReX FArrayBox)
-      // but u is intended to be used with a C-order API (like openPMD)
-      
-      std::reverse( u.begin(), u.end() );
-
-      return u;
-    }
-
-    inline void
-    setOpenPMDUnit ( openPMD::Mesh mesh, const std::string field_name )
-    {
-        if (field_name[0] == 'E'){
-	  mesh.setUnitDimension({
-	      {openPMD::UnitDimension::L,  1},
-	      {openPMD::UnitDimension::M,  1},
-	      {openPMD::UnitDimension::T, -3},
-	      {openPMD::UnitDimension::I, -1},
-	    });
-	} else if (field_name[0] == 'B'){ 
-            mesh.setUnitDimension({
-		{openPMD::UnitDimension::M,  1},
-		{openPMD::UnitDimension::I, -1},
-		{openPMD::UnitDimension::T, -2}
-	      });
-	}else if (field_name[0] == 'j'){ // current
-            mesh.setUnitDimension({
-		{openPMD::UnitDimension::L, -2},
-		{openPMD::UnitDimension::I,  1},
-	      });
-        } else if (field_name.substr(0,3) == "rho"){ // charge density
-	  mesh.setUnitDimension({
-	      {openPMD::UnitDimension::L, -3},
-	      {openPMD::UnitDimension::I,  1},
-	      {openPMD::UnitDimension::T,  1},
-	    });
-        }
-    }
-        
-	    
     
     ////////////////////////////////////////
     //
@@ -292,10 +204,8 @@ namespace amrex {
     //
     ////////////////////////////////////////
 
-    AMReX_openPMDHandler::AMReX_openPMDHandler(const std::string& prefix, // match to diag_name in warpx
-					       bool isBTD)
-      :m_Writer(nullptr),       
-       m_IsBTD(isBTD)
+    AMReX_openPMDHandler::AMReX_openPMDHandler(const std::string& prefix) // match to diag_name in warpx
+      :m_Writer(nullptr)
     {
       BL_PROFILE("AMReX_openPMDHandler::()");
       CreateWriter(prefix);
@@ -328,17 +238,6 @@ namespace amrex {
       else if ( 0 == openpmd_encoding.compare("f") )
         encoding = openPMD::IterationEncoding::fileBased;
 
-
-      if (m_IsBTD)
-      {
-        if ( ( openPMD::IterationEncoding::fileBased != encoding ) &&
-             ( openPMD::IterationEncoding::groupBased != encoding ) )
-        {
-       	   std::string warnMsg = prefix+" Unable to support BTD with streaming. Using GroupBased ";
-           encoding = openPMD::IterationEncoding::groupBased;
-        }
-      }
-
       auto lf_collect = [&](const char* key,
 			    const std::string& parameter_tag,
 			    std::string&  key_type,
@@ -370,10 +269,7 @@ namespace amrex {
       std::string options=getSeriesOptions(operator_type, operator_parameters,
 					   engine_type, engine_parameters);
       
-      if (m_IsBTD)
-	m_Writer = std::make_unique<AMReX_openPMDWriterBTD>(prefix, encoding, openpmd_backend, options);
-      else
-	m_Writer = std::make_unique<AMReX_openPMDWriter>(prefix, encoding, openpmd_backend, options);
+      m_Writer = std::make_unique<AMReX_openPMDWriter>(prefix, encoding, openpmd_backend, options);
 
       pp_prefix.query("file_min_digits", m_Writer->m_openPMDMinDigits);
       
@@ -385,6 +281,9 @@ namespace amrex {
     // Classs AMReX_openPMDWriter
     //
     ////////////////////////////////////////
+    AMReX_openPMDWriter::AMReX_openPMDWriter ()
+    {}
+
     AMReX_openPMDWriter::AMReX_openPMDWriter (const std::string& prefix,
 					      openPMD::IterationEncoding ie,
 					      std::string filetype,
@@ -481,13 +380,12 @@ if( m_openPMDFileType == "default" )
 	  amrex::openpmd_api::AMReX_VarNameParser curr(varname);
 	  curr.GetMeshCompNames( lev ); 
 	  {
-	    std::cout<<"Level:  "<<lev<<"  Domain:  "<<full_geom.Domain()<<std::endl;;
 	    if (curr.m_CompName == openPMD::MeshRecordComponent::SCALAR)
 	      {
 		if ( ! meshes.contains(curr.m_FieldName) )
 		  {
 		    auto mesh = meshes[curr.m_FieldName];
-		    SetupMeshComp(  mesh, full_geom, *curr_mf, curr);
+		    SetupMeshComp(  mesh, full_geom, *curr_mf, curr );
 		  }
 	      }
 	    else
@@ -521,12 +419,17 @@ if( m_openPMDFileType == "default" )
 	  for( amrex::MFIter mfi(*curr_mf); mfi.isValid(); ++mfi )
             {
 	      amrex::FArrayBox const& fab = (*curr_mf)[mfi];
-	      amrex::Box const& local_box = fab.box();
+	      // TODO: fab.box() shows ghost cells, while validbox does not
+	      //       what should I use? dataPtr() covers ghost cell or not?
+	      //     NOTE that getReversedVec() turns everything into uint first.
+	      //amrex::Box const& local_box = fab.box();
+	      amrex::Box const& local_box = mfi.validbox();
 	      
+
 	      // Determine the offset and size of this chunk
 	      amrex::IntVect const box_offset = local_box.smallEnd() - global_box.smallEnd();
-	      auto chunk_offset = getReversedVec( box_offset );
-	      auto chunk_size = getReversedVec( local_box.size() );
+	      auto chunk_offset = helper::getReversedVec( box_offset );
+	      auto chunk_size = helper::getReversedVec( local_box.size() );
 	      
 	      if (curr.m_ThetaMode)
 		{
@@ -556,8 +459,6 @@ if( m_openPMDFileType == "default" )
     void AMReX_openPMDWriter::WriteMesh(const std::vector<std::string>& varnames,
 					const amrex::Vector<const amrex::MultiFab*>& mf,
 					const amrex::Vector<amrex::Geometry>& geom,
-					int output_levels,
-					const Vector<int> &iteration,
 					//const int iteration,
 					const double time ) const
 
@@ -569,8 +470,9 @@ if( m_openPMDFileType == "default" )
       auto meshes = series_iteration.meshes;
       series_iteration.setTime( time );
             
-      if ( varnames.size()==0 ) return;
+      if ( 0 == varnames.size() ) return;
 
+      int output_levels = geom.size();
       for (int lev=0; lev < output_levels; lev++)
 	{
 	  amrex::Geometry full_geom = geom[lev];
@@ -583,7 +485,6 @@ if( m_openPMDFileType == "default" )
 #ifdef AMREX_USE_GPU
 	  amrex::Gpu::streamSynchronize();
 #endif
-	  
 	  m_Series->flush();	  
       } // for lev loop 
     }
@@ -610,26 +511,24 @@ if( m_openPMDFileType == "default" )
 	}
       filename.append(".").append(m_openPMDFileType);
       filepath.append(filename);
-      //return filename;      
     }
 
     void AMReX_openPMDWriter::SetupFields (openPMD::Container< openPMD::Mesh >& meshes,	
 					   amrex::Geometry& full_geom) const
     {
+      //}
       // meta data for ED-PIC extension
-      auto const period = full_geom.periodicity(); // TODO double-check: is this the proper global bound or of some level?
+      auto const period = full_geom.periodicity();
       
       std::vector<std::string> fieldBoundary(6, "reflecting");
       std::vector<std::string> particleBoundary(6, "absorbing");
       fieldBoundary.resize(AMREX_SPACEDIM * 2);
       particleBoundary.resize(AMREX_SPACEDIM * 2);
 
-      /*
-	  TODO m_fieldPMLdirection is warpx specific  
-      for (auto i = 0u; i < fieldBoundary.size() / 2u; ++i)
-	if (m_fieldPMLdirections.at(i))
-	  fieldBoundary.at(i) = "open";
-      */
+#if AMREX_SPACEDIM != 3
+      fieldBoundary.resize(4);
+      particleBoundary.resize(4);
+#endif
       
       for (auto i = 0u; i < fieldBoundary.size() / 2u; ++i)
 	if (period.isPeriodic(i)) {
@@ -639,54 +538,10 @@ if( m_openPMDFileType == "default" )
 	  particleBoundary.at(2u * i + 1u) = "periodic";
 	}
       
-      /* TODO  warpx specific
-      meshes.setAttribute("fieldSolver", []() {
-	switch (WarpX::electromagnetic_solver_id) {
-	case ElectromagneticSolverAlgo::Yee :
-	  return "Yee";
-	case ElectromagneticSolverAlgo::CKC :
-	  return "CK";
-	case ElectromagneticSolverAlgo::PSATD :
-	  return "PSATD";
-	default:
-	  return "other";
-	}
-      }())
-	;
-      */
       meshes.setAttribute("fieldBoundary", fieldBoundary);
       meshes.setAttribute("particleBoundary", particleBoundary);
-      /* TODO warpx specific
-      meshes.setAttribute("currentSmoothing", []() {
-          if (WarpX::use_filter) return "Binomial";
-          else return "none";
-      }());
-      if (WarpX::use_filter)
-          meshes.setAttribute("currentSmoothingParameters", []() {
-              std::stringstream ss;
-              ss << "period=1;compensator=false";
-#if (AMREX_SPACEDIM >= 2)
-              ss << ";numPasses_x=" << WarpX::filter_npass_each_dir[0];
-#endif
-#if defined(WARPX_DIM_3D)
-              ss << ";numPasses_y=" << WarpX::filter_npass_each_dir[1];
-              ss << ";numPasses_z=" << WarpX::filter_npass_each_dir[2];
-#elif defined(WARPX_DIM_XZ) || defined(WARPX_DIM_RZ)
-              ss << ";numPasses_z=" << WarpX::filter_npass_each_dir[1];
-#elif defined(WARPX_DIM_1D_Z)
-              ss << ";numPasses_z=" << WarpX::filter_npass_each_dir[0];
-#endif
-              std::string currentSmoothingParameters = ss.str();
-              return currentSmoothingParameters;
-          }());
-      meshes.setAttribute("chargeCorrection", []() {
-          if (WarpX::do_dive_cleaning) return "hyperbolic"; // TODO or "spectral" or something? double-check                                   
-          else return "none";
-      }());
-       if (WarpX::do_dive_cleaning)
-          meshes.setAttribute("chargeCorrectionParameters", "period=1");
-      */
     }
+
 
     void AMReX_openPMDWriter::SetupMeshComp (openPMD::Mesh& mesh,					     
 					     amrex::Geometry& full_geom,
@@ -696,107 +551,39 @@ if( m_openPMDFileType == "default" )
     {
       auto mesh_comp = mesh[varName.m_CompName];
       amrex::Box const & global_box = full_geom.Domain();
-      auto global_size = getReversedVec(global_box.size() );
-      amrex::Print()<<" TODO double check mesh comps (scalar vs not scalar) name="<<varName.m_CompName<<" global[0]="<<global_size[0]<<std::endl;
+      auto global_size = helper::getReversedVec(global_box.size() );
+
       // - Grid spacing
-      std::vector<double> const grid_spacing = getReversedVec(full_geom.CellSize());
+      std::vector<double> const grid_spacing = helper::getReversedVec(full_geom.CellSize());
+      mesh.setGridSpacing(grid_spacing);
       
       // - Global offset
-      std::vector<double> const global_offset = getReversedVec(full_geom.ProbLo());
-      /*
-	TODO warpx specific
-#if defined(WARPX_DIM_RZ)
-      auto & warpx = WarpX::GetInstance();
-      if (var_in_theta_mode) {
-	global_size.emplace(global_size.begin(), warpx.ncomps);
-      }
-#endif
-      */
-      // - AxisLabels
+      std::vector<double> const global_offset = helper::getReversedVec(full_geom.ProbLo());
+      mesh.setGridGlobalOffset(global_offset);
       
-      //std::vector<std::string> axis_labels = getFieldAxisLabels(varName.m_ThetaMode);
+      // - AxisLabels
       std::vector<std::string> axis_labels = varName.getFieldAxisLabels();
+      mesh.setAxisLabels(axis_labels);
       
       // Prepare the type of dataset that will be written
       openPMD::Datatype const datatype = openPMD::determineDatatype<amrex::Real>();
       auto const dataset = openPMD::Dataset(datatype, global_size);
       mesh.setDataOrder(openPMD::Mesh::DataOrder::C);
+
       if (varName.m_ThetaMode) {
-        mesh.setGeometry("thetaMode");
-	/*
-	  TODO  warpx specific
-        mesh.setGeometryParameters("m=" + std::to_string(WarpX::n_rz_azimuthal_modes) + ";imag=+");
-	*/
+	mesh.setGeometry("thetaMode");
       }
-      mesh.setAxisLabels(axis_labels);
-      mesh.setGridSpacing(grid_spacing);
-      mesh.setGridGlobalOffset(global_offset);
+
       mesh.setAttribute("fieldSmoothing", "none");
       mesh_comp.resetDataset(dataset);
       
-      setOpenPMDUnit( mesh, varName.m_FieldName );
+      helper::setOpenPMDUnit( mesh, varName.m_FieldName );
       
-      // TODO: getRelativeCellPosition(mf) is from WarpX
-      auto relative_cell_pos = getRelativeCellPosition(mf);     // AMReX Fortran index order    
+      auto relative_cell_pos = helper::getRelativeCellPosition(mf);     // AMReX Fortran index order
       std::reverse( relative_cell_pos.begin(), relative_cell_pos.end() ); // now in C order
       mesh_comp.setPosition( relative_cell_pos );      
     }
     
-   
-					    
-    ////////////////////////////////////////
-    //
-    // Classs AMReX_openPMDWriter<BTD>
-    //
-    ////////////////////////////////////////
-    AMReX_openPMDWriterBTD::AMReX_openPMDWriterBTD(const std::string& prefix,
-						   openPMD::IterationEncoding ie,
-						   std::string filetype,
-						   std::string options)
-    //std::vector<bool> fieldPMLdirections // warpx specific
-      :AMReX_openPMDWriter(prefix, ie, filetype, options)
-    {
-      m_openPMDDatasetOptions="{ \"resizable\": true }";
-      amrex::Print()<<" TODO: make sure dataset option resizable IS used for BTD\n";
-    }
-
-    void AMReX_openPMDWriterBTD::CloseStep(int ts)
-    {
-      std::cout<<" TODO.. BTD ..  close step "<<std::endl;
-      /*
-      // default close is true
-      bool callClose = true;
-      
-      // close BTD file only when isLastBTDFlush is true
-      if (isBTD and !isLastBTDFlush) callClose = false;
-      if (callClose) {
-        if (m_Series) {
-	  GetIteration(m_CurrentStep, isBTD).close();
-        }	
-      }
-      */
-    }
-
-    void AMReX_openPMDWriterBTD::Init(openPMD::Access access)
-    {
-      std::cout<<"TODO.. BTD ..  Init "<<std::endl;
-      if (m_Series != nullptr)
-	return;
-      AMReX_openPMDWriter::Init(access);
-    }
-
-    void AMReX_openPMDWriterBTD::WriteMesh(const std::vector<std::string>& varnames,
-					   const amrex::Vector<const amrex::MultiFab*>& mf,
-					   const amrex::Vector<amrex::Geometry>& geom,
-					   int output_levels,
-					   const Vector<int> &iteration,
-					   //const int iteration,
-					   const double time ) const
-   
-    {
-      BL_PROFILE("AMReX_openPMDWriter_BTD::WriteMesh()");
-      std::cout<<"TODO ... BTD.. fields .."<<std::endl;
-    }
 
   } // namespace openpmd_api
 } // namespace amrex

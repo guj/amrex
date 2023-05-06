@@ -21,7 +21,7 @@ namespace amrex
   {
     /*global*/std::unique_ptr< AMReX_openPMDHandler > m_OpenPMDHandler = nullptr;
     
-    void InitHandler(const std::string& prefix, bool isBTD)
+    void InitHandler(const std::string& prefix)
     {
       std::string filePath {""};
       if (prefix.size() == 0)
@@ -32,13 +32,23 @@ namespace amrex
       else {
 	filePath = prefix;
       }
-      
+
       if (m_OpenPMDHandler == nullptr)
-	m_OpenPMDHandler.reset(new AMReX_openPMDHandler(filePath, isBTD));
+	m_OpenPMDHandler.reset(new AMReX_openPMDHandler(filePath));
       else if (m_OpenPMDHandler->m_Writer != nullptr)
-	if (m_OpenPMDHandler->m_Writer->m_openPMDPrefix !=  filePath)	
-	  m_OpenPMDHandler.reset(new AMReX_openPMDHandler(filePath, isBTD));
+	if (m_OpenPMDHandler->m_Writer->m_openPMDPrefix !=  filePath)
+	  m_OpenPMDHandler.reset(new AMReX_openPMDHandler(filePath));
       // already using the directory, no action needed
+    }
+
+    void UseCustomWriter(AMReX_openPMDWriter* w)
+    {
+      BL_ASSERT ( m_OpenPMDHandler != nullptr );
+      BL_ASSERT ( w != nullptr );
+
+      // so the openpmd filepath assigned from input file is still in use
+      w->m_openPMDPrefix = m_OpenPMDHandler->m_Writer->m_openPMDPrefix;
+      m_OpenPMDHandler->m_Writer.reset(w);
     }
 
     void CloseHandler()
@@ -66,67 +76,47 @@ namespace amrex
     }
     
     void WriteSingleLevel (//const std::string &plotfilename,
-                                          const MultiFab &mf,
-                                          const Vector<std::string> &varnames,
-                                          const Geometry &geom,
-                                          Real t,
-                                          int level_step,
-                                          const std::string &versionName, 
-                                          const std::string &levelPrefix,
-                                          const std::string &mfPrefix,
-                                          const Vector<std::string>& extra_dirs,
-                                          AMReX_BTDInfoField* btd_info )
+			   const MultiFab &mf,
+			   const Vector<std::string> &varnames,
+			   const Geometry &geom,
+			   Real t,
+			   //int level_step,
+			   const std::string &versionName,
+			   const std::string &levelPrefix,
+			   const std::string &mfPrefix,
+			   const Vector<std::string>& extra_dirs)
     {
-      /*
-      ParallelDescriptor::Barrier();
-      
-      amrex::Print()<<"===> To write single level in openpmd\n";
-      if (m_OpenPMDHandler == nullptr)
-	m_OpenPMDHandler.reset(new AMReX_openPMDHandler(plotfilename));
-      else if (m_OpenPMDHandler->m_openPMDFileInput !=  plotfilename)	
-	m_OpenPMDHandler.reset(new AMReX_openPMDHandler(plotfilename));
+      Vector<const MultiFab*> v_mf(1,&mf);
+      Vector<Geometry> v_geom(1,geom);
+      //Vector<int> v_level_steps(1,level_step);
+      Vector<IntVect> ref_ratio;
 
-      // silly test
-	//openPMD::Series series = openPMD::Series("1_structure.bp", openPMD::Access::CREATE);
-      
-        openPMD::ParticleSpecies electrons = m_OpenPMDHandler->m_Writer->GetIteration(1).particles["electrons"];
-
-	openPMD::Record mass = electrons["mass"];
-	openPMD::RecordComponent mass_scalar = mass[openPMD::RecordComponent::SCALAR];
-
-	openPMD::Dataset dataset = openPMD::Dataset(openPMD::Datatype::DOUBLE, openPMD::Extent{1});
-	mass_scalar.resetDataset(dataset);
-
-	electrons["position"]["x"].resetDataset(dataset);
-	electrons["position"]["x"].makeConstant(20.0);
-	electrons["positionOffset"]["x"].resetDataset(dataset);
-	electrons["positionOffset"]["x"].makeConstant(22.0);
-      */
-      
+      WriteMultiLevel(v_mf, varnames, v_geom, t, /*v_level_steps,*/ ref_ratio, versionName, levelPrefix, mfPrefix, extra_dirs);
     }
     
-    void WriteMultiLevel (//const std::string &plotfilename,
-                                         int nlevels,
-                                         const Vector<const MultiFab*> &mf,
-                                         const Vector<std::string> &varnames,
-                                         const Vector<Geometry> &geom,
-                                         Real time,
-                                         const Vector<int> &level_steps,
-                                         const Vector<IntVect> &ref_ratio,
-                                         const std::string &versionName,
-                                         const std::string &levelPrefix,
-                                         const std::string &mfPrefix,
-                                         const Vector<std::string>& extra_dirs,
-                                         AMReX_BTDInfoField* btd_info )
+    void WriteMultiLevel (
+			  //int nlevels, // will write all levels in mf & geom
+			  const Vector<const MultiFab*> &mf,
+			  const Vector<std::string> &varnames,
+			  const Vector<Geometry> &geom,
+			  Real time,
+			  //const Vector<int> &level_steps,
+			  const Vector<IntVect> &ref_ratio,
+			  const std::string &versionName,
+			  const std::string &levelPrefix,
+			  const std::string &mfPrefix,
+			  const Vector<std::string>& extra_dirs)
     {
       if ((m_OpenPMDHandler == nullptr) || (m_OpenPMDHandler->m_Writer == nullptr))
 	return;
 
+      BL_ASSERT ( geom.size() == mf.size() );
+      BL_ASSERT ( mf[0]->nComp() <= varnames.size() );
+
       m_OpenPMDHandler->m_Writer->WriteMesh(varnames,
 					    mf, //amrex::GetVecOfConstPtrs(mf),
 					    geom,
-					    nlevels,
-					    level_steps,
+					    //level_steps[0],
 					    time);
     }
   } // namespace openpmd_api
