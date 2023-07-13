@@ -414,10 +414,13 @@ namespace amrex
 
 	for (auto currDim = 0; currDim < AMREX_SPACEDIM; currDim++)
 	  {
+	    //amrex::AllPrint()<<aos.size()<<"  num ptls "<<numParticleOnTile<<"\n";
 	    std::shared_ptr<amrex::ParticleReal> curr(new amrex::ParticleReal[numParticleOnTile],
 						      [](amrex::ParticleReal const *p) { delete[] p; }
 						      );
 	    for (auto i = 0; i < numParticleOnTile; i++) {
+	      //amrex::AllPrint()<<"  i =  "<<i<<" of "<<numParticleOnTile<<"\n";
+	      //amrex::AllPrint()<<"  i =  "<<i<<" "<<aos[i]<<"\n";
 	      curr.get()[i] = aos[i].pos(currDim);
 	    }
 	    std::string const positionComponent = positionComponents[currDim];
@@ -437,7 +440,6 @@ namespace amrex
       }
     }
 
-    
     template<class PIt>
     void
     AMReX_openPMDWriter::SaveRealProperty (PIt& pti,
@@ -510,13 +512,16 @@ namespace amrex
       //
       // define positions & offsets
       //
-      AllocatePtlProperties(currSpecies, write_real_comp, real_comp_names, write_int_comp, int_comp_names,
-			    pc.m_PtlCounter.GetTotalNumParticles());
+      /*AllocatePtlProperties(currSpecies, write_real_comp, real_comp_names, write_int_comp, int_comp_names,
+				pc.m_PtlCounter.GetTotalNumParticles()); */
 
-      SetupRealProperties(pc, currSpecies, write_real_comp, real_comp_names, write_int_comp, int_comp_names,
-			  pc.m_PtlCounter.GetTotalNumParticles());
-
-      SetupConstant(currSpecies, pc.m_PtlCounter.GetTotalNumParticles());
+      if ( AllocatePtlProperties(currSpecies, write_real_comp, real_comp_names, write_int_comp, int_comp_names,
+				 pc.m_PtlCounter.GetTotalNumParticles()) )
+	{
+	  SetupRealProperties(pc, currSpecies, write_real_comp, real_comp_names, write_int_comp, int_comp_names,
+			      pc.m_PtlCounter.GetTotalNumParticles());
+	  SetupConstant(currSpecies, pc.m_PtlCounter.GetTotalNumParticles());
+	}
 
       pc_func(pc, currSpecies, pc.m_PtlCounter.GetTotalNumParticles());
       // open files from all processors, in case some will not contribute below
@@ -554,7 +559,9 @@ namespace amrex
 	  }
 	}
 
-      // TODO adiosWorkaround with empty rank reading error();
+      if (emptyPC && m_Series->backend() == "ADIOS2") {
+	// TODO adiosWorkaround with empty rank reading error() for __BTD__
+      }
       m_Series->flush();
     }
 

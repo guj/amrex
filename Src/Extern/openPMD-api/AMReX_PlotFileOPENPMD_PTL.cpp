@@ -18,7 +18,7 @@
 namespace amrex {
   namespace openpmd_api {
 
-    void AMReX_openPMDWriter::AllocatePtlProperties(openPMD::ParticleSpecies& currSpecies,
+    bool AMReX_openPMDWriter::AllocatePtlProperties(openPMD::ParticleSpecies& currSpecies,
 						    const amrex::Vector<int>& write_real_comp,
 						    const amrex::Vector<std::string>& real_comp_names,
 						    const amrex::Vector<int>& write_int_comp,
@@ -46,6 +46,8 @@ namespace amrex {
 
       auto dtype_int  = openPMD::Dataset(openPMD::determineDatatype<int>(), {np}, m_openPMDDatasetOptions);
       lf_compRecordInit(write_int_comp, int_comp_names, dtype_int);
+
+      return true;
     }
 
     void AMReX_openPMDWriter::SetupPos(openPMD::ParticleSpecies& currSpecies,
@@ -78,7 +80,7 @@ namespace amrex {
 					    const unsigned long long& np) const
     {
       auto realType = openPMD::Dataset(openPMD::determineDatatype<amrex::ParticleReal>(), {np}, m_openPMDDatasetOptions);
-      auto const scalar = openPMD::RecordComponent::SCALAR;
+      //auto const scalar = openPMD::RecordComponent::SCALAR;
 
       auto const positionComponents = getParticlePositionComponentLabels();
       for( auto const& comp : positionComponents ) {

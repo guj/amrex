@@ -19,8 +19,34 @@ namespace amrex
 {  
   namespace openpmd_api
   {
-    /*global*/std::unique_ptr< AMReX_openPMDHandler > m_OpenPMDHandler = nullptr;
-    
+    /* global handler, activate with InitHandler() & deactivate with CloseHandler() */
+    std::unique_ptr< AMReX_openPMDHandler > m_OpenPMDHandler = nullptr;
+
+    std::unique_ptr<AMReX_openPMDHandler> InitUserHandler(const std::string& prefix)
+    {
+      std::string filePath {""};
+      if (prefix.size() == 0)
+	{
+	  ParmParse pp;
+	  pp.query("openpmd_directory", filePath);
+	}
+      else {
+	filePath = prefix;
+      }
+
+      std::unique_ptr< AMReX_openPMDHandler > userHandler;
+      userHandler.reset(new AMReX_openPMDHandler(filePath));
+      return userHandler;
+    }
+
+    void CloseUserHandler(std::unique_ptr<AMReX_openPMDHandler>& userHandler)
+    {
+      if (userHandler == nullptr)
+	return;
+
+      userHandler.reset(nullptr);
+    }
+
     void InitHandler(const std::string& prefix)
     {
       std::string filePath {""};

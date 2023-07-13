@@ -112,16 +112,20 @@ namespace amrex
     }
 
     struct AMReX_VarNameParser; // forward declaration
-    class AMReX_openPMDWriter;
+    class  AMReX_openPMDWriter;
+    class  AMReX_openPMDHandler;
 
     /*
     */
 
     void UseCustomWriter(AMReX_openPMDWriter* w);
 
+    std::unique_ptr<AMReX_openPMDHandler> InitUserHandler(const std::string& prefix);
+    void CloseUserHandler(std::unique_ptr<AMReX_openPMDHandler>& h);
+
     void InitHandler(const std::string& filePath);
     //void SetCustomizer(AMReX_Optional* f);
-    
+
     void SetStep(int ts);
     void CloseStep(int ts);    
     void CloseHandler();
@@ -259,7 +263,7 @@ namespace amrex
 			 FUNC_pit&& pitFunc
 			 ) const;
 
-      virtual void AllocatePtlProperties(openPMD::ParticleSpecies& currSpecies,
+      virtual bool AllocatePtlProperties(openPMD::ParticleSpecies& currSpecies,
 					 const amrex::Vector<int>& write_real_comp,
 					 const amrex::Vector<std::string>& real_comp_names,
 					 const amrex::Vector<int>& write_int_comp,
@@ -321,6 +325,8 @@ namespace amrex
 
       openPMD::IterationEncoding  m_openPMDEncoding = openPMD::IterationEncoding::fileBased;
 
+      std::string m_openPMDFileType = "bp";
+      std::string m_openPMDSeriesOptions = std::string();
 
     protected:
       void CompSetup(int lev,
@@ -340,7 +346,7 @@ namespace amrex
 			amrex::Geometry& full_geom) const;
 
       virtual void SetupMeshComp (openPMD::Mesh& mesh,
-			  amrex::Geometry& full_geom,
+			  const amrex::Geometry& full_geom,
 			  amrex::MultiFab const& mf,
 			  const AMReX_VarNameParser& varName) const;
 
@@ -385,8 +391,6 @@ namespace amrex
       
       int m_CurrentStep = -1;
 
-      std::string m_openPMDFileType = "bp";
-      std::string m_openPMDSeriesOptions = std::string();
     };
 
 
@@ -405,8 +409,6 @@ namespace amrex
       
     }; // class AMReX_openPMDHandler
     
-
-    //static std::unique_ptr< AMReX_openPMDHandler > m_OpenPMDHandler = nullptr;
         
   }// name space openpmd_api
 } // namespace amrex

@@ -123,7 +123,7 @@ namespace amrex {
       std::string end_block;
       std::string op_block;
       std::string en_block;
-      
+
       std::string op_parameters;
       for (const auto& kv : operator_parameters) {
 	if (!op_parameters.empty()) op_parameters.append(",\n");
@@ -139,7 +139,7 @@ namespace amrex {
 	  .append("\"").append(kv.first).append("\": ")    /* key */
 	  .append("\"").append(kv.second).append("\""); /* value (as string) */
       }
-      
+
       top_block = R"END( 
 {
   "adios2": {)END";
@@ -318,6 +318,7 @@ if( m_openPMDFileType == "default" )
     void AMReX_openPMDWriter::SetStep(int ts)
     {
       m_CurrentStep = ts;
+
       Init(openPMD::Access::CREATE);
     }
 
@@ -325,7 +326,7 @@ if( m_openPMDFileType == "default" )
     {
       if (m_Series) {
 	GetIteration(m_CurrentStep).close();
-      }      
+      }
     }
 
     void AMReX_openPMDWriter::Init(openPMD::Access access)
@@ -385,14 +386,14 @@ if( m_openPMDFileType == "default" )
 		if ( ! meshes.contains(curr.m_FieldName) )
 		  {
 		    auto mesh = meshes[curr.m_FieldName];
-		    SetupMeshComp(  mesh, full_geom, *curr_mf, curr );
+                    SetupMeshComp(  mesh, full_geom, *curr_mf, curr );
 		  }
 	      }
 	    else
 	      {
 		auto mesh = meshes[curr.m_FieldName];
 		if ( ! mesh.contains(curr.m_CompName) )
-		  SetupMeshComp(  mesh, full_geom, *curr_mf, curr );		
+		  SetupMeshComp(  mesh, full_geom, *curr_mf, curr );
 	      }
 	  }
 	} // icomp setup loop 
@@ -406,16 +407,18 @@ if( m_openPMDFileType == "default" )
     {
       int const ncomp = curr_mf->nComp();
       amrex::Box const & global_box = full_geom.Domain();
-      
+
+
       for ( int icomp=0; icomp<ncomp; icomp++ )
 	{
 	  std::string const & varname = varnames[icomp];
+
 	  amrex::openpmd_api::AMReX_VarNameParser curr(varname);
 	  curr.GetMeshCompNames( lev );
-	  
+
 	  auto mesh = meshes[curr.m_FieldName];
 	  auto mesh_comp = mesh[curr.m_CompName];
-	  
+
 	  for( amrex::MFIter mfi(*curr_mf); mfi.isValid(); ++mfi )
             {
 	      amrex::FArrayBox const& fab = (*curr_mf)[mfi];
@@ -424,7 +427,6 @@ if( m_openPMDFileType == "default" )
 	      //     NOTE that getReversedVec() turns everything into uint first.
 	      //amrex::Box const& local_box = fab.box();
 	      amrex::Box const& local_box = mfi.validbox();
-	      
 
 	      // Determine the offset and size of this chunk
 	      amrex::IntVect const box_offset = local_box.smallEnd() - global_box.smallEnd();
@@ -529,7 +531,7 @@ if( m_openPMDFileType == "default" )
       fieldBoundary.resize(4);
       particleBoundary.resize(4);
 #endif
-      
+
       for (auto i = 0u; i < fieldBoundary.size() / 2u; ++i)
 	if (period.isPeriodic(i)) {
 	  fieldBoundary.at(2u * i) = "periodic";
@@ -544,11 +546,13 @@ if( m_openPMDFileType == "default" )
 
 
     void AMReX_openPMDWriter::SetupMeshComp (openPMD::Mesh& mesh,					     
-					     amrex::Geometry& full_geom,
+					     const amrex::Geometry& full_geom,
 					     amrex::MultiFab const& mf,
 					     const AMReX_VarNameParser& varName
 					     ) const
     {
+      BL_PROFILE("SetupMeshComp(default)");
+
       auto mesh_comp = mesh[varName.m_CompName];
       amrex::Box const & global_box = full_geom.Domain();
       auto global_size = helper::getReversedVec(global_box.size() );
