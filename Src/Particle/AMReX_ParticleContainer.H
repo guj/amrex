@@ -1411,10 +1411,6 @@ using ParticleContainerPureSoA = ParticleContainer_impl<SoAParticle<T_NArrayReal
 #include "AMReX_ParticleHDF5.H"
 #endif
 
-#ifdef AMREX_USE_OPENPMD_API
-#include "AMReX_ParticlesOPENPMDImpl.H"
-#endif
-
 }
 
 #endif /*_PARTICLES_H_*/
