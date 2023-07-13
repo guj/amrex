@@ -19,27 +19,27 @@ namespace amrex {
   namespace openpmd_api {
 
     bool AMReX_openPMDWriter::AllocatePtlProperties(openPMD::ParticleSpecies& currSpecies,
-						    const amrex::Vector<int>& write_real_comp,
-						    const amrex::Vector<std::string>& real_comp_names,
-						    const amrex::Vector<int>& write_int_comp,
-						    const amrex::Vector<std::string>& int_comp_names,
-						    const unsigned long long np) const
+                                                    const amrex::Vector<int>& write_real_comp,
+                                                    const amrex::Vector<std::string>& real_comp_names,
+                                                    const amrex::Vector<int>& write_int_comp,
+                                                    const amrex::Vector<std::string>& int_comp_names,
+                                                    const unsigned long long np) const
     {
       SetupPos(currSpecies, np);
 
       // Allocate _all_ datasets of dtype.
       // handle scalar and non-scalar records by name
       auto const lf_compRecordInit = [&currSpecies](const amrex::Vector<int>& write_comp,
-						    const amrex::Vector<std::string>& comp_names,
-						    openPMD::Dataset& dtype)
+                                                    const amrex::Vector<std::string>& comp_names,
+                                                    openPMD::Dataset& dtype)
       {
-	auto const min_counter = std::min(write_comp.size(), comp_names.size());
-	for (int i = 0; i < min_counter; ++i)
-	  {
-	    if (write_comp[i]) {
-	      helper::getComponentRecord(currSpecies,  comp_names[i]).resetDataset(dtype);
-	    }
-	  }
+        auto const min_counter = std::min(write_comp.size(), comp_names.size());
+        for (int i = 0; i < min_counter; ++i)
+          {
+            if (write_comp[i]) {
+              helper::getComponentRecord(currSpecies,  comp_names[i]).resetDataset(dtype);
+            }
+          }
       };
       auto dtype_real = openPMD::Dataset(openPMD::determineDatatype<amrex::ParticleReal>(), {np}, m_openPMDDatasetOptions);
       lf_compRecordInit(write_real_comp, real_comp_names, dtype_real);
@@ -51,16 +51,16 @@ namespace amrex {
     }
 
     void AMReX_openPMDWriter::SetupPos(openPMD::ParticleSpecies& currSpecies,
-				       const unsigned long long& np) const
+                                       const unsigned long long& np) const
     {
       auto realType = openPMD::Dataset(openPMD::determineDatatype<amrex::ParticleReal>(), {np}, m_openPMDDatasetOptions);
       auto idType = openPMD::Dataset(openPMD::determineDatatype< uint64_t >(), {np}, m_openPMDDatasetOptions);
-      
+
       auto const positionComponents = /*helper::*/getParticlePositionComponentLabels();
       for( auto const& comp : positionComponents )
-	{
-	  currSpecies["position"][comp].resetDataset( realType );
-	}
+        {
+          currSpecies["position"][comp].resetDataset( realType );
+        }
 
       auto const scalar = openPMD::RecordComponent::SCALAR;
       currSpecies["id"][scalar].resetDataset( idType );
@@ -77,7 +77,7 @@ namespace amrex {
     // since it is a const, only need to be called before flushing
     //
     void AMReX_openPMDWriter::SetupConstant(openPMD::ParticleSpecies& currSpecies,
-					    const unsigned long long& np) const
+                                            const unsigned long long& np) const
     {
       auto realType = openPMD::Dataset(openPMD::determineDatatype<amrex::ParticleReal>(), {np}, m_openPMDDatasetOptions);
       //auto const scalar = openPMD::RecordComponent::SCALAR;

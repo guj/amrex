@@ -12,7 +12,7 @@ struct InputParams {
   int max_grid_size;
   int ncomp;
   int nlevs;
-  
+
   //int restart_check = 0;
   int nplotfile = 1;
   //int sleeptime = 0;
@@ -34,7 +34,7 @@ void loadParameters(InputParams& input)
 }
 
 void set_grids_nested (const InputParams& input,
-		       Vector<Box>& domains,
+                       Vector<Box>& domains,
                        Vector<BoxArray>& grids,
                        Vector<IntVect>& ref_ratio);
 
@@ -49,13 +49,13 @@ int main(int argc, char* argv[])
 }
 
 struct TestField
-{  
+{
   TestField(const InputParams& inputs)
   {
     m_Time = 0.0;
 
     const int nghost = 0;
-    
+
     Vector<Box> domains;
     Vector<BoxArray> ba;
     set_grids_nested(inputs, domains, ba, m_Ref_ratio);
@@ -98,7 +98,7 @@ struct TestField
   }
 
   Vector<int> m_Level_steps;
-  
+
   Vector<std::string> m_Varnames;
   Real m_Time;
   Vector<IntVect> m_Ref_ratio;
@@ -106,7 +106,7 @@ struct TestField
   Vector<std::unique_ptr<MultiFab> > m_mf;
 };
 
-  
+
 void saveFile(char* fname,  const InputParams& inputs, const TestField& testField)
 {
 #ifdef AMREX_USE_OPENPMD_API
@@ -116,49 +116,49 @@ void saveFile(char* fname,  const InputParams& inputs, const TestField& testFiel
     {
       openpmd_api::SetStep(ts);
       openpmd_api::WriteMultiLevel(//fname,
-				   amrex::GetVecOfConstPtrs(testField.m_mf), testField.m_Varnames,
-				   testField.m_Geom, testField.m_Time, /*testField.m_Level_steps,*/ testField.m_Ref_ratio);
+                                   amrex::GetVecOfConstPtrs(testField.m_mf), testField.m_Varnames,
+                                   testField.m_Geom, testField.m_Time, /*testField.m_Level_steps,*/ testField.m_Ref_ratio);
       openpmd_api::CloseStep(ts);
-      
-      //saveFile(fname, ts, inputs, testField);	
+
+      //saveFile(fname, ts, inputs, testField);
       amrex::Print()<<"Timestep: "<<ts<<" done \n";
     }
 
   openpmd_api::CloseHandler();
-  
+
 #else
   /*WriteMultiLevelPlotfile(fname, inputs.nlevs, amrex::GetVecOfConstPtrs(testField.m_mf),
                                 testField.m_Varnames, testField.m_Geom,
-				testField.m_Time, testField.m_Level_steps, testField.m_Ref_ratio);
+                                testField.m_Time, testField.m_Level_steps, testField.m_Ref_ratio);
   */
-  
-#endif  
+
+#endif
 }
 
 void test ()
-{    
+{
     InputParams inputs;
     loadParameters(inputs);
     TestField testField(inputs);
 
-    
+
     //char fname[512]="adios_diag";
     char fname[512]="";
     saveFile(fname, inputs, testField);
-    
+
     /* ParallelDescriptor::Barrier(); */
 }
 
 
 void set_grids_nested (const InputParams& input,
-		       Vector<Box>& domains,
+                       Vector<Box>& domains,
                        Vector<BoxArray>& grids,
                        Vector<IntVect>& ref_ratio)
 {
   //int ncells, max_grid_size, nlevs;
 
     AMREX_ALWAYS_ASSERT(input.nlevs < 2); // relax this later
-    
+
     IntVect domain_lo(AMREX_D_DECL(0, 0, 0));
     IntVect domain_hi(AMREX_D_DECL(input.ncells-1, input.ncells-1, input.ncells-1));
 

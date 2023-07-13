@@ -14,7 +14,7 @@ namespace WarpX
   static short particle_pusher_algo = 0;
   static short field_gathering_algo = 1;
   static short current_deposition_algo = 0;
-  
+
   struct CurrentDepositionAlgo {
     enum {
          Esirkepov = 0,
@@ -22,14 +22,14 @@ namespace WarpX
          Vay = 2
     };
   };
-  
+
   struct GatheringAlgo {
     enum {
          EnergyConserving = 0,
          MomentumConserving
     };
   };
-    
+
   struct ParticlePusherAlgo {
     enum {
         Boris = 0,
@@ -47,7 +47,7 @@ namespace WarpX
       ECT = 4
     };
   };
-  
+
 };
 
 

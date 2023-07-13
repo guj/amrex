@@ -2,19 +2,19 @@
 #define AMREX_PTL_OPENPMD_API_H
 
 //#include <openPMD/openpmd.hpp>
-  
+
 
 struct AMReX_PtlCounter
 {
   int m_MPIRank = 0;
   int m_MPISize = 1;
-  
+
   unsigned long long m_Total = 0;
-  
+
   std::vector<unsigned long long> m_ParticleCounterByLevel;
 
   unsigned long GetTotalNumParticles () const { return m_Total;}
-  
+
   std::vector<unsigned long long> m_ParticleOffsetAtRank;
   std::vector<unsigned long long> m_ParticleSizeAtRank;
 };
@@ -31,8 +31,8 @@ void CountParticles()
   m_PtlCounter.m_ParticleSizeAtRank.resize(this->finestLevel()+1);
 
   auto lf_GetParticleOffsetOfProcessor = [&](const long& numParticles,
-					     unsigned long long& offset,
-					     unsigned long long& sum)  -> void
+                                             unsigned long long& offset,
+                                             unsigned long long& sum)  -> void
   {
     std::vector<long> result(m_PtlCounter.m_MPISize,  0);
     amrex::ParallelGather::Gather (numParticles, result.data(), -1, amrex::ParallelDescriptor::Communicator());
@@ -42,7 +42,7 @@ void CountParticles()
     for (int i=0;  i<result.size();  i++) {
       sum +=  result[i];
       if ( i < m_PtlCounter.m_MPIRank)
-	offset +=  result[i];
+        offset +=  result[i];
     }
   };
 
@@ -52,8 +52,8 @@ void CountParticles()
 
       //for (ParIter pti(*this, currentLevel); pti.isValid(); ++pti) {
       for (ParConstIterType pti(*this, currentLevel); pti.isValid(); ++pti) {
-	auto numParticleOnTile = pti.numParticles();
-	numParticles += numParticleOnTile;
+        auto numParticleOnTile = pti.numParticles();
+        numParticles += numParticleOnTile;
       }
 
       unsigned long long offset=0; // offset of this level
@@ -66,9 +66,9 @@ void CountParticles()
 
       // adjust offset, it should be numbered after particles from previous levels
       for (auto lv=0; lv<currentLevel; lv++)
-	{
-	  m_PtlCounter.m_ParticleOffsetAtRank[currentLevel] += m_PtlCounter.m_ParticleCounterByLevel[lv];
-	}
+        {
+          m_PtlCounter.m_ParticleOffsetAtRank[currentLevel] += m_PtlCounter.m_ParticleCounterByLevel[lv];
+        }
 
       m_PtlCounter.m_Total += sum;
     }

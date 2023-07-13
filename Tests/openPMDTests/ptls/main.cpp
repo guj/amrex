@@ -24,31 +24,31 @@ struct TestParams {
     int max_grid_size;
     int nppc;
     bool verbose;
-  
+
     int nplotfile=1;
 };
 
 void checkMFBox(const TestParams& parms,
-		Vector<const MultiFab*> outputMF)		
+                Vector<const MultiFab*> outputMF)
 {
       for (int lev=0; lev < parms.nlevs; lev++)
-	{
-	  auto curr_mf = outputMF[lev];
-	  int const ncomp = curr_mf->nComp();
-	  amrex::Print()<<" checking boxes, lev="<<lev<<" ncomp="<<ncomp<<std::endl;
+        {
+          auto curr_mf = outputMF[lev];
+          int const ncomp = curr_mf->nComp();
+          amrex::Print()<<" checking boxes, lev="<<lev<<" ncomp="<<ncomp<<std::endl;
 
-	  for ( int icomp=0; icomp<ncomp; icomp++ )
-	    {	      
-	      for( amrex::MFIter mfi(*curr_mf); mfi.isValid(); ++mfi )
-		{
-		  amrex::FArrayBox const& fab = (*curr_mf)[mfi];
-		  amrex::Box const& local_box = fab.box();
+          for ( int icomp=0; icomp<ncomp; icomp++ )
+            {
+              for( amrex::MFIter mfi(*curr_mf); mfi.isValid(); ++mfi )
+                {
+                  amrex::FArrayBox const& fab = (*curr_mf)[mfi];
+                  amrex::Box const& local_box = fab.box();
 
-		  amrex::Print()<<"  .. checking:   icomp="<<icomp<< " local box="<<local_box;
-		  amrex::Print()<<"   "<<*(fab.dataPtr())<<std::endl;
-		}
-	    }
-	}
+                  amrex::Print()<<"  .. checking:   icomp="<<icomp<< " local box="<<local_box;
+                  amrex::Print()<<"   "<<*(fab.dataPtr())<<std::endl;
+                }
+            }
+        }
 }
 
 
@@ -102,7 +102,7 @@ void testParticleMesh (TestParams& parms, int nghost)
         // one field comp for density1
         density1[lev].define(ba[lev], dm[lev], 1, nghost);
         density1[lev].setVal(0.0);
-	// and two field comp for density2
+        // and two field comp for density2
         density2[lev].define(ba[lev], dm[lev], 2, nghost);
         density2[lev].setVal(2.0);
     }
@@ -173,7 +173,7 @@ void testParticleMesh (TestParams& parms, int nghost)
     Vector<IntVect> outputRR(output_levs);
     for (int lev = 0; lev < output_levs; ++lev) {
         outputMF1[lev] = &density1[lev];
-	outputMF2[lev] = &density2[lev];
+        outputMF2[lev] = &density2[lev];
         outputRR[lev] = IntVect(AMREX_D_DECL(2, 2, 2));
     }
 
@@ -192,46 +192,46 @@ void testParticleMesh (TestParams& parms, int nghost)
     int nsteps = 3;
     for (int ts = 0; ts < nsteps; ts++)
       {
-	//Vector<int> level_steps;
-	//level_steps.push_back(ts);
-	//level_steps.push_back(ts);
+        //Vector<int> level_steps;
+        //level_steps.push_back(ts);
+        //level_steps.push_back(ts);
 
-	openpmd_api::SetStep(ts);
-	openpmd_api::WriteParticles(myPC, specieName /*ts*/);  //  with default component names
+        openpmd_api::SetStep(ts);
+        openpmd_api::WriteParticles(myPC, specieName /*ts*/);  //  with default component names
 
-	char name[512]; 
-	std::snprintf(name, sizeof name, "plotfile_%05d",  ts);
+        char name[512];
+        std::snprintf(name, sizeof name, "plotfile_%05d",  ts);
 
-	if ( 1 == parms.nlevs )
-	  {
-	  // example to store coarse level
-	  openpmd_api::WriteSingleLevel(*(outputMF1[0]), varnames1, geom[0], 0.0, 0);
-	  openpmd_api::WriteSingleLevel(*(outputMF2[0]), varnames2, geom[0], 0.0, 0);
-	  }
-	else
-	  {
-	    // store multi mesh levels
-	    openpmd_api::WriteMultiLevel(//parms.nlevs,
-					 outputMF1,
-					 varnames1,
-					 geom,
-					 0.0,
-					 //level_steps,
-					 outputRR
-					 );
-	    // store multi mesh levels
-	    openpmd_api::WriteMultiLevel(//parms.nlevs,
-					 outputMF2,
-					 varnames2,
-					 geom,
-					 0.0,
-					 //level_steps,
-					 outputRR
-					 );
-	  }
-	openpmd_api::CloseStep(ts);
+        if ( 1 == parms.nlevs )
+          {
+          // example to store coarse level
+          openpmd_api::WriteSingleLevel(*(outputMF1[0]), varnames1, geom[0], 0.0, 0);
+          openpmd_api::WriteSingleLevel(*(outputMF2[0]), varnames2, geom[0], 0.0, 0);
+          }
+        else
+          {
+            // store multi mesh levels
+            openpmd_api::WriteMultiLevel(//parms.nlevs,
+                                         outputMF1,
+                                         varnames1,
+                                         geom,
+                                         0.0,
+                                         //level_steps,
+                                         outputRR
+                                         );
+            // store multi mesh levels
+            openpmd_api::WriteMultiLevel(//parms.nlevs,
+                                         outputMF2,
+                                         varnames2,
+                                         geom,
+                                         0.0,
+                                         //level_steps,
+                                         outputRR
+                                         );
+          }
+        openpmd_api::CloseStep(ts);
 
-	amrex::Print()<<"Timestep: "<<ts<<" done \n";
+        amrex::Print()<<"Timestep: "<<ts<<" done \n";
       }
 
     openpmd_api::CloseHandler();
@@ -366,50 +366,50 @@ void testBTD (TestParams& parms, int nghost)
     //
     for (int its = 0; its < nsteps; its++)
       {
-	int ts = its % 2;
-	openpmd_api::SetStep(ts);
+        int ts = its % 2;
+        openpmd_api::SetStep(ts);
 
-	if ( (its - 2) == ts )
-	  {
-	    //call AssignPtloffset() to assign the right starting offset of ptl batch
-	    testWriter->AssignPtlOffset(num_particles);
-	    testWriter->SetLastFlush();
-	  }
-	if (0)
-	  { //  test with default component names
-	    openpmd_api::WriteParticles(myPC, specieName);
-	  }
-	else
-	  { // test with RZ style pos id
-	    openpmd_api::WriteParticles(myPC,
-					specieName,
-					[=] (auto& pc, openPMD::ParticleSpecies& currSpecies, unsigned long long localTotal)
-					{
-					  amrex::ParticleReal charge = 0.01; // warpx: pc->getCharge()
-					  amrex::ParticleReal mass = 0.5; // warpx: pc->getMass();
+        if ( (its - 2) == ts )
+          {
+            //call AssignPtloffset() to assign the right starting offset of ptl batch
+            testWriter->AssignPtlOffset(num_particles);
+            testWriter->SetLastFlush();
+          }
+        if (0)
+          { //  test with default component names
+            openpmd_api::WriteParticles(myPC, specieName);
+          }
+        else
+          { // test with RZ style pos id
+            openpmd_api::WriteParticles(myPC,
+                                        specieName,
+                                        [=] (auto& pc, openPMD::ParticleSpecies& currSpecies, unsigned long long localTotal)
+                                        {
+                                          amrex::ParticleReal charge = 0.01; // warpx: pc->getCharge()
+                                          amrex::ParticleReal mass = 0.5; // warpx: pc->getMass();
 
-					  testWriter->SetConstantMassCharge(currSpecies, localTotal, charge,  mass);
-					},
-					[=] (auto& pti, openPMD::ParticleSpecies& currSpecies, unsigned long long offset)
-					{
-					  testWriter->SavePosId_RZ(pti, currSpecies, offset); // also supports RZ
-					});
-	  }
+                                          testWriter->SetConstantMassCharge(currSpecies, localTotal, charge,  mass);
+                                        },
+                                        [=] (auto& pti, openPMD::ParticleSpecies& currSpecies, unsigned long long offset)
+                                        {
+                                          testWriter->SavePosId_RZ(pti, currSpecies, offset); // also supports RZ
+                                        });
+          }
 
-	{
-	  // store multi mesh levels
-	  openpmd_api::WriteMultiLevel(//parms.nlevs,
-				       outputMF1,
-				       varnames1,
-				       geom,
-				       0.0,
-				       outputRR
-				       );
-	}
+        {
+          // store multi mesh levels
+          openpmd_api::WriteMultiLevel(//parms.nlevs,
+                                       outputMF1,
+                                       varnames1,
+                                       geom,
+                                       0.0,
+                                       outputRR
+                                       );
+        }
 
-	openpmd_api::CloseStep(ts);
+        openpmd_api::CloseStep(ts);
 
-	amrex::Print()<<"Timestep: "<<ts<<" done \n";
+        amrex::Print()<<"Timestep: "<<ts<<" done \n";
       }
 
     openpmd_api::CloseHandler();
@@ -432,7 +432,7 @@ int main(int argc, char* argv[])
   pp.get("nppc", parms.nppc);
   pp.get("nlevs", parms.nlevs);
   //pp.get("nplotfile", parms.nplotfile);
-    
+
   if (parms.nppc < 1 && ParallelDescriptor::IOProcessor())
     amrex::Abort("Must specify at least one particle per cell");
 
@@ -447,7 +447,7 @@ int main(int argc, char* argv[])
     std::cout << parms.nx << " " << parms.ny << " " << parms.nz << std::endl;
   }
 
-  
+
   int nghost = 1 ;
   std::cout<<"  TODO: RESOLVE!!!  if nghost=1  there is tile offset be  at -1  "<<std::endl;
 

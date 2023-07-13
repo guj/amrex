@@ -7,7 +7,7 @@ target_sources( amrex
    AMReX_PlotFileUtilOPENPMD.H
    AMReX_PlotFileUtilOPENPMD.cpp
    AMReX_PlotFileOPENPMD.cpp
-   AMReX_PlotFileOPENPMD_PTL.cpp	
+   AMReX_PlotFileOPENPMD_PTL.cpp
 
    AMReX_ParticlesOPENPMD.H
  )
