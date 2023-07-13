@@ -30,7 +30,7 @@ public:
   //  fields related  funcitons
   //
   void SetupMeshComp (openPMD::Mesh& mesh,					     
-		      amrex::Geometry& full_geom,
+		      const amrex::Geometry& full_geom,
 		      amrex::MultiFab const& mf,
 		      const amrex::openpmd_api::AMReX_VarNameParser& varName) const override;
 
@@ -54,7 +54,7 @@ private:
 
 
 void AMReX_warpxWriter::SetupMeshComp (openPMD::Mesh& mesh,					     
-				       amrex::Geometry& full_geom,
+				       const amrex::Geometry& full_geom,
 				       amrex::MultiFab const& mf,
 				       const amrex::openpmd_api::AMReX_VarNameParser& varName) const
 {

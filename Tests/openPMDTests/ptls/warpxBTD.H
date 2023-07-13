@@ -37,7 +37,7 @@ class AMReX_warpxBTDWriter final : public AMReX_warpxWriter
 
   /*
   */
-  void AllocatePtlProperties(openPMD::ParticleSpecies& currSpecies,
+  bool AllocatePtlProperties(openPMD::ParticleSpecies& currSpecies,
 			     const amrex::Vector<int>& write_real_comp,
 			     const amrex::Vector<std::string>& real_comp_names,
 			     const amrex::Vector<int>& write_int_comp,
@@ -130,7 +130,7 @@ void AMReX_warpxBTDWriter::Init(openPMD::Access access)
   AMReX_openPMDWriter::Init(access);
 }
 
-void AMReX_warpxBTDWriter::AllocatePtlProperties(openPMD::ParticleSpecies& currSpecies,
+bool AMReX_warpxBTDWriter::AllocatePtlProperties(openPMD::ParticleSpecies& currSpecies,
 						  const amrex::Vector<int>& write_real_comp,
 						  const amrex::Vector<std::string>& real_comp_names,
 						  const amrex::Vector<int>& write_int_comp,
@@ -141,9 +141,8 @@ void AMReX_warpxBTDWriter::AllocatePtlProperties(openPMD::ParticleSpecies& currS
   if (np > 0)
     {
       //AMReX_openPMDWriter::SetupPos(currSpecies, np + m_AssignedPtlOffset);
-      AMReX_openPMDWriter::AllocatePtlProperties(currSpecies, write_real_comp, real_comp_names,
+      return AMReX_openPMDWriter::AllocatePtlProperties(currSpecies, write_real_comp, real_comp_names,
 						 write_int_comp, int_comp_names, np + GetGrandOffset());
-      return;
     }
   //  np == 0  
   if ( m_LastFlush && ( m_AssignedPtlOffset == 0 ) )
@@ -151,7 +150,8 @@ void AMReX_warpxBTDWriter::AllocatePtlProperties(openPMD::ParticleSpecies& currS
       // properties were never allocated
       //AMReX_openPMDWriter::SetupPos(currSpecies, np);
       AMReX_openPMDWriter::AllocatePtlProperties(currSpecies, write_real_comp, real_comp_names, write_int_comp, int_comp_names, np);
-    }        
+    }
+  return false;
 }
 
 /*
