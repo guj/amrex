@@ -12,9 +12,6 @@
 #include <AMReX_EBFabFactory.H>
 #endif
 
-//#ifdef AMREX_USE_OPENPMD_API
-//#include <openPMD/openPMD.hpp>
-//#endif
 #include <AMReX_PlotFileUtilOPENPMD.H>
 
 namespace amrex
