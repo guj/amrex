@@ -426,7 +426,25 @@ namespace amrex
             std::string const positionComponent = positionComponents[currDim];
             currSpecies["position"][positionComponent].storeChunk(curr, {offset + GetGrandOffset()}, {numParticleOnTile64});
           }
+      }
+      SaveSpecieId(pti, currSpecies, offset);
+    }
 
+    template<class PIt>
+    void
+    AMReX_openPMDWriter::SaveSpecieId(PIt& pti,
+                                      openPMD::ParticleSpecies& currSpecies,
+                                      unsigned long long offset) const
+    {
+      BL_PROFILE("amrex::openpmd_api::SaveSpecieId");
+      auto const numParticleOnTile = pti.numParticles();
+      uint64_t const numParticleOnTile64 = static_cast<uint64_t>( numParticleOnTile );
+
+      // get position and particle ID from aos
+      // note: this implementation iterates the AoS 4x...
+      // if we flush late as we do now, we can also copy out the data in one go
+      const auto& aos = pti.GetArrayOfStructs();  // size =  numParticlesOnTile
+      {
         // save particle ID after converting it to a globally unique ID
         std::shared_ptr< uint64_t > ids(new uint64_t[numParticleOnTile],
                                         [](uint64_t const *p){ delete[] p; }

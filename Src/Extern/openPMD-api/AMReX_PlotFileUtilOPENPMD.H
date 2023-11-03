@@ -367,6 +367,12 @@ namespace amrex
 
       template<class PIt>
       void
+      SaveSpecieId(PIt& pti,
+                  openPMD::ParticleSpecies& currSpecies,
+                  unsigned long long offset) const;
+
+      template<class PIt>
+      void
       StoreAoS_Int(PIt& pti,
                    openPMD::ParticleSpecies& currSpecies,
                    const amrex::Vector<int>& write_int_comp,
