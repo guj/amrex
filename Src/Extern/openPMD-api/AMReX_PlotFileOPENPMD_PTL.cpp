@@ -74,13 +74,12 @@ namespace amrex {
 
     // from warpx  SetConstParticleRecordsEDPIC ()
     //
-    // since it is a const, only need to be called before flushing
+    // constant values, just call before flushing
     //
     void AMReX_openPMDWriter::SetupConstant(openPMD::ParticleSpecies& currSpecies,
                                             const unsigned long long& np) const
     {
       auto realType = openPMD::Dataset(openPMD::determineDatatype<amrex::ParticleReal>(), {np}, m_openPMDDatasetOptions);
-      //auto const scalar = openPMD::RecordComponent::SCALAR;
 
       auto const positionComponents = getParticlePositionComponentLabels();
       for( auto const& comp : positionComponents ) {
